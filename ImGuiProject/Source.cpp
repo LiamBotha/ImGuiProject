@@ -34,6 +34,16 @@ const float NODE_SLOT_RADIUS = 5.0f;
 static int node_selected = -1;;
 static bool show_grid = true;
 
+bool connectionHovered = false;
+
+enum NodeType
+{
+    DEFAULT,
+    DIALOGUE,
+    CHOICE,
+    CONDITION,
+};
+
 struct Node
 {
     int id = -1;
@@ -42,8 +52,10 @@ struct Node
     ImVec2 pos;
     ImVec2 size;
 
+    NodeType type = DEFAULT;
+
     std::vector<Node*> outputConnections;
-};
+}; //TODO - Convert to class with subnode classes
 
 std::unique_ptr<Node> connection_selected;
 
@@ -159,6 +171,8 @@ void DrawHermiteCurve(ImDrawList* drawList, ImVec2 p1, ImVec2 p2, int STEPS) // 
 
 void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_selected) // Todo - go back add connections and dragging
 {
+    draw_list->ChannelsSplit(2);
+
     int node_hovered_in_scene = -1;
     bool open_context_menu = false;
 
@@ -176,24 +190,40 @@ void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_select
     ImVec2 pos = node_rect_min + NODE_WINDOW_PADDING;
     pos.x = node_rect_min.x + (node->size.x / 2) - textSize.x / 2;
 
-    ImGui::SetCursorScreenPos(pos);
-    ImGui::Text("%s", node->name);
+    ImVec2 node_rect_max = node_rect_min + node->size;
+
+    ImGui::BeginGroup();
+    ImGui::SetCursorScreenPos(pos + ImVec2(node->size.x / 3, 0));
+    ImGui::Text(node->name);
 
     pos.y += 20;
 
-    char playerInput[16] = ""; // Todo - give text nodes their own char for storing text
+    if (node->type == DIALOGUE)
+    {
+        char playerInput[16] = ""; // Todo - give text nodes their own char for storing text
 
-    ImGui::SetCursorScreenPos(pos);
+        ImGui::SetCursorScreenPos(pos);
 
-    std::string label = "###" + std::to_string(node->id);
+        std::string label = "###" + std::to_string(node->id);
 
-    ImGui::InputText( label.c_str(),playerInput, IM_ARRAYSIZE(playerInput));
+        ImGui::InputText(label.c_str(), playerInput, IM_ARRAYSIZE(playerInput));
+
+        node_rect_max = node_rect_max + ImVec2(IM_ARRAYSIZE(playerInput) * 3.5, 0);
+    }
+    else
+    {
+        char playerInput[16] = ""; // Todo - give text nodes their own char for storing text
+
+        ImGui::SetCursorScreenPos(pos);
+
+        std::string label = "###" + std::to_string(node->id);
+
+        ImGui::InputText(label.c_str(), playerInput, IM_ARRAYSIZE(playerInput));
+
+        node_rect_max = node_rect_max + ImVec2(IM_ARRAYSIZE(playerInput) * 3.5, 0);
+    }
 
     bool node_widgets_active = (!old_any_active && ImGui::IsAnyItemActive());
-
-    ImVec2 node_rect_max = node_rect_min + node->size;
-
-    node_rect_max = node_rect_max + ImVec2(IM_ARRAYSIZE(playerInput) * 3.5, 0);
 
     draw_list->ChannelsSetCurrent(0); // set to background
 
@@ -204,6 +234,19 @@ void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_select
     {
         node_hovered_in_scene = node->id;
         open_context_menu |= ImGui::IsMouseClicked(1);
+
+        if (connection_selected && ImGui::IsMouseReleased(0) && connection_selected.get() != node)
+        {
+            connection_selected->outputConnections.push_back(node);
+
+            connection_selected.release();
+        }
+
+        if (open_context_menu)
+        {
+            if (node_hovered_in_scene != -1)
+                node_selected = node_hovered_in_scene;
+        }
     }
 
     bool node_moving_active = false;
@@ -221,24 +264,28 @@ void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_select
     //draw_list->AddRectFilled(node_rect_min + ImVec2(1, 1), titleArea, ImColor(100, 0, 0), 4.0f);
     draw_list->AddRect(node_rect_min, node_rect_max, ImColor(100, 100, 100), 4.0f);
 
+    ImGui::EndGroup();
+
     draw_list->ChannelsSetCurrent(1); // set to background
+
 
     ImColor color = IM_COL32_WHITE;
 
     if (ImRect((node_rect_min + ImVec2(128, 8)), (node_rect_min + ImVec2(135, 15))).Contains(mouse))
     {
+        connectionHovered = true;
+
         color = IM_COL32_BLACK;
 
-        if (!connection_selected && ImGui::IsMouseClicked(0))
+        if (!connection_selected && ImGui::IsMouseDown(0))
         {
             connection_selected = std::unique_ptr<Node>(node);
 
             std::cout << "node" << connection_selected->id << std::endl;
         }
-        else if (connection_selected && ImGui::IsMouseReleased(0) && connection_selected.get() != node)
+        
+        if (connection_selected && ImGui::IsMouseReleased(0) && connection_selected.get() == node)
         {
-            connection_selected->outputConnections.push_back(node);
-
             connection_selected.release();
         }
     }
@@ -250,45 +297,6 @@ void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_select
     
     draw_list->AddCircleFilled(node_rect_min + ImVec2(133,12), NODE_SLOT_RADIUS, color);
 
-    //offset.y += 40.0f;
-    //
-    //offset = offset + node_rect_min;
-    //
-    //for (Connection* con : node->inputConnections)
-    //{
-    //    ImGui::SetCursorScreenPos(offset + ImVec2(10.0f, 0));
-    //    //ImGui::Text("%s", con->desc.name);
-    //
-    //    ImColor conColor = ImColor(150, 150, 150);
-    //
-    //    if (IsConnectorHovered(con, node_rect_min))
-    //        conColor = ImColor(200, 200, 200);
-    //
-    //    draw_list->AddCircleFilled(node_rect_min + con->pos, NODE_SLOT_RADIUS, conColor);
-    //
-    //    offset.y += textSize.y + 2.0f;
-    //}
-    //
-    //offset = node_rect_min;
-    //offset.y += 40.0f;
-    //
-    //for (Connection* con : node->outputConnections)
-    //{
-    //    //textSize = ImGui::CalcTextSize(con->desc.name);
-    //
-    //    ImGui::SetCursorScreenPos(offset + ImVec2(con->pos.x - (textSize.x + 10.0f), 0));
-    //    //ImGui::Text("%s", con->desc.name);
-    //
-    //    ImColor conColor = ImColor(150, 150, 150);
-    //
-    //    if (IsConnectorHovered(con, node_rect_min))
-    //        conColor = ImColor(200, 200, 200);
-    //
-    //    draw_list->AddCircleFilled(node_rect_min + con->pos, NODE_SLOT_RADIUS, conColor);
-    //
-    //    offset.y += textSize.y + 2.0f;
-    //}
-
     if (node_widgets_active || node_moving_active)
         node_selected = node->id;
 
@@ -296,6 +304,8 @@ void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_select
         node->pos = node->pos + ImGui::GetIO().MouseDelta;
 
     ImGui::PopID();
+
+    draw_list->ChannelsMerge();
 }
 
 void RenderLines(ImDrawList* draw_list, ImVec2 offset)
@@ -306,12 +316,19 @@ void RenderLines(ImDrawList* draw_list, ImVec2 offset)
     {
         for (Node* con : node->outputConnections)
         {
-            DrawHermiteCurve(draw_list, offset + node->pos + ImVec2(385, 75), offset + con->pos + ImVec2(250, 75), 20);
+            DrawHermiteCurve(draw_list, offset + node->pos + ImVec2(135, 12), offset + con->pos + ImVec2(0, 25), 20);
         }
+    }
+
+    if (connection_selected && ImGui::IsMouseDown(0))
+    {
+        ImVec2 mouse = ImGui::GetIO().MousePos;
+
+        DrawHermiteCurve(draw_list, offset + connection_selected->pos + ImVec2(135, 12), offset + mouse - ImVec2(235, 55), 15);
     }
 }
 
-static Node* CreateNode(int id, const char* name, ImVec2 size, ImVec2 pos = {0,0})
+static Node* CreateNode(int id, const char* name, ImVec2 size, ImVec2 pos = {0,0}, NodeType nodeType = DEFAULT)
 {
     Node* node = new Node();
 
@@ -319,26 +336,11 @@ static Node* CreateNode(int id, const char* name, ImVec2 size, ImVec2 pos = {0,0
     node->name = name;
     node->size = size;
     node->pos = pos;
+    node->type = nodeType;
 
     ImVec2 titleSize = ImGui::CalcTextSize(node->name);
 
     titleSize.y *= 3;
-
-    //for (Connection* c : node->inputConnections)
-    //{
-    //    c->pos = ImVec2(0.0f, titleSize.y / 2.0f);
-
-    //    c->pos.y += 3;
-    //}
-
-    //// set the positions for the output nodes when we know where the place them
-    //for (Connection* c : node->outputConnections)
-    //{
-    //    c->pos = ImVec2(node->size.x, titleSize.y / 2.0f);
-
-    //    c->pos.x *= 1.7f;
-    //    c->pos.y += 3;
-    //}
 
     return node;
 }
@@ -406,9 +408,9 @@ int main()
 
         if (nodes.size() == 0)
         {
-            nodes.push_back(CreateNode(nodes.size(), "Name Node", { 80,50 }, { 25, 40 }));
-            nodes.push_back(CreateNode(nodes.size(), "Name Node", { 80,50 }, { 250, 80 }));
-            nodes.push_back(CreateNode(nodes.size(), "Name Node", { 80,50 }, { 500, 120 }));
+            nodes.push_back(CreateNode(nodes.size(), "Name Node", { 80,50 }, { 25, 40 }, DIALOGUE));
+            nodes.push_back(CreateNode(nodes.size(), "Name Node", { 80,50 }, { 250, 80 }, DIALOGUE));
+            nodes.push_back(CreateNode(nodes.size(), "Name Node", { 80,50 }, { 500, 120 }, DIALOGUE));
 
             nodes[0]->outputConnections.push_back(nodes[1]);
             nodes[1]->outputConnections.push_back(nodes[2]);
@@ -454,8 +456,11 @@ int main()
 
         {
             bool open_context_menu = false;
+            bool open_node_menu = false;
             int node_hovered_in_list = -1;
             int node_hovered_in_scene = -1;
+
+            connectionHovered = false;
 
             static ImVec2 scrolling = ImVec2(0.0f, 0.0f);
 
@@ -511,8 +516,10 @@ int main()
             }
 
             // Display links
-            draw_list->ChannelsSplit(2);
+            //draw_list->ChannelsSplit(2);
             //draw_list->ChannelsSetCurrent(0); // Background
+
+            RenderLines(draw_list, offset);
 
             //Display Nodes
             for (Node* node : nodes)
@@ -520,11 +527,14 @@ int main()
                 DrawNode(draw_list, node, offset,node_selected);
             }
 
-            draw_list->ChannelsSetCurrent(0); // set to background
+            //draw_list->ChannelsSetCurrent(0); // set to background
             //UpdateDragging(scrolling);
-            RenderLines(draw_list, scrolling);
 
-            draw_list->ChannelsMerge();
+
+            if (connectionHovered == false && ImGui::IsMouseReleased(0))
+            {
+                connection_selected.release();
+            }
 
             // Open context menu
             if (!ImGui::IsAnyItemHovered() && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(1))
@@ -532,28 +542,60 @@ int main()
                 node_selected = node_hovered_in_list = node_hovered_in_scene = -1;
                 open_context_menu = true;
             }
+            else if (ImGui::IsAnyItemHovered() && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(1))
+            {
+                if (node_selected != -1)
+                    open_node_menu = true;
+            }
             if (open_context_menu)
             {
                 ImGui::OpenPopup("context_menu");
-                if (node_hovered_in_list != -1)
-                    node_selected = node_hovered_in_list;
-                if (node_hovered_in_scene != -1)
-                    node_selected = node_hovered_in_scene;
+            }
+            else if(open_node_menu)
+            {
+                ImGui::OpenPopup("node_menu");
             }
 
             // Draw context menu
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
             if (ImGui::BeginPopup("context_menu"))
             {
-                if (ImGui::MenuItem("Add Node"))
+                if (ImGui::MenuItem("Add Dialogue Node"))
                 {
                     ImVec2 mousePos = ImGui::GetMousePos() - scrolling;
                     mousePos.x -= 325;
                     mousePos.y -= 100;
 
-                    nodes.push_back(CreateNode(nodes.size(), "Name Node", { 80,50 }, mousePos));
+                    nodes.push_back(CreateNode(nodes.size(), "Dialogue Node", { 80,50 }, mousePos, DIALOGUE));
+                }
+                else if (ImGui::MenuItem("Add Choice Node"))
+                {
+                    ImVec2 mousePos = ImGui::GetMousePos() - scrolling;
+                    mousePos.x -= 325;
+                    mousePos.y -= 100;
+
+                    nodes.push_back(CreateNode(nodes.size(), "Choice Node", { 80,50 }, mousePos, CHOICE));
+                }
+                else if (ImGui::MenuItem("Add Condition Node"))
+                {
+                    ImVec2 mousePos = ImGui::GetMousePos() - scrolling;
+                    mousePos.x -= 325;
+                    mousePos.y -= 100;
+
+                    nodes.push_back(CreateNode(nodes.size(), "Condition Node", { 80,50 }, mousePos, CONDITION));
                 }
 
+                ImGui::EndPopup();
+            }
+            ImGui::PopStyleVar();
+
+            // Draw context menu
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+            if (ImGui::BeginPopup("node_menu"))
+            {
+                if (ImGui::MenuItem("Delete Node"))
+                {
+                }
                 ImGui::EndPopup();
             }
             ImGui::PopStyleVar();
