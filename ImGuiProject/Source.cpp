@@ -34,6 +34,8 @@ const float NODE_SLOT_RADIUS = 5.0f;
 static int node_selected = -1;;
 static bool show_grid = true;
 
+static int nodeNum = 0;
+
 bool connectionHovered = false;
 
 enum NodeType
@@ -310,21 +312,23 @@ void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_select
 
 void RenderLines(ImDrawList* draw_list, ImVec2 offset)
 {
-    draw_list->ChannelsSetCurrent(0); // set to background
+    //draw_list->ChannelsSetCurrent(0); // set to background
 
     for (Node* node : nodes)
     {
         for (Node* con : node->outputConnections)
         {
-            DrawHermiteCurve(draw_list, offset + node->pos + ImVec2(135, 12), offset + con->pos + ImVec2(0, 25), 20);
+            if (con != nullptr)
+                DrawHermiteCurve(draw_list, offset + node->pos + ImVec2(135, 12), offset + con->pos + ImVec2(0, 25), 20);
         }
     }
 
     if (connection_selected && ImGui::IsMouseDown(0))
     {
         ImVec2 mouse = ImGui::GetIO().MousePos;
+        ImVec2 winPos = ImGui::GetWindowPos();
 
-        DrawHermiteCurve(draw_list, offset + connection_selected->pos + ImVec2(135, 12), offset + mouse - ImVec2(235, 55), 15);
+        DrawHermiteCurve(draw_list, offset + connection_selected->pos + ImVec2(135, 12), mouse, 15);
     }
 }
 
@@ -408,9 +412,9 @@ int main()
 
         if (nodes.size() == 0)
         {
-            nodes.push_back(CreateNode(nodes.size(), "Name Node", { 80,50 }, { 25, 40 }, DIALOGUE));
-            nodes.push_back(CreateNode(nodes.size(), "Name Node", { 80,50 }, { 250, 80 }, DIALOGUE));
-            nodes.push_back(CreateNode(nodes.size(), "Name Node", { 80,50 }, { 500, 120 }, DIALOGUE));
+            nodes.push_back(CreateNode(++nodeNum, "Name Node", { 80,50 }, { 25, 40 }, DIALOGUE));
+            nodes.push_back(CreateNode(++nodeNum, "Name Node", { 80,50 }, { 250, 80 }, DIALOGUE));
+            nodes.push_back(CreateNode(++nodeNum, "Name Node", { 80,50 }, { 500, 120 }, DIALOGUE));
 
             nodes[0]->outputConnections.push_back(nodes[1]);
             nodes[1]->outputConnections.push_back(nodes[2]);
@@ -566,7 +570,7 @@ int main()
                     mousePos.x -= 325;
                     mousePos.y -= 100;
 
-                    nodes.push_back(CreateNode(nodes.size(), "Dialogue Node", { 80,50 }, mousePos, DIALOGUE));
+                    nodes.push_back(CreateNode(++nodeNum, "Dialogue Node", { 80,50 }, mousePos, DIALOGUE));
                 }
                 else if (ImGui::MenuItem("Add Choice Node"))
                 {
@@ -574,7 +578,7 @@ int main()
                     mousePos.x -= 325;
                     mousePos.y -= 100;
 
-                    nodes.push_back(CreateNode(nodes.size(), "Choice Node", { 80,50 }, mousePos, CHOICE));
+                    nodes.push_back(CreateNode(++nodeNum, "Choice Node", { 80,50 }, mousePos, CHOICE));
                 }
                 else if (ImGui::MenuItem("Add Condition Node"))
                 {
@@ -582,7 +586,7 @@ int main()
                     mousePos.x -= 325;
                     mousePos.y -= 100;
 
-                    nodes.push_back(CreateNode(nodes.size(), "Condition Node", { 80,50 }, mousePos, CONDITION));
+                    nodes.push_back(CreateNode(++nodeNum, "Condition Node", { 80,50 }, mousePos, CONDITION));
                 }
 
                 ImGui::EndPopup();
@@ -595,6 +599,22 @@ int main()
             {
                 if (ImGui::MenuItem("Delete Node"))
                 {
+                    for (int i = 0; i < nodes.size(); ++i)
+                    {
+                        if (nodes[i]->id == node_selected)
+                        {
+                            nodes.erase(nodes.begin() + i);
+                            continue;
+                        }
+                        
+                        for (int j = 0; j < nodes[i]->outputConnections.size(); ++j)
+                        {
+                            if (nodes[i]->outputConnections[j]->id == node_selected)
+                            {
+                                nodes[i]->outputConnections.erase(nodes[i]->outputConnections.begin() + j);
+                            }
+                        }
+                    }
                 }
                 ImGui::EndPopup();
             }
