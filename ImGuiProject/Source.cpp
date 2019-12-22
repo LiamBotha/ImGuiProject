@@ -215,6 +215,48 @@ void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_select
 
         //node_rect_max = node_rect_max + ImVec2(IM_ARRAYSIZE(playerInput) * 3.5, 0);
     }
+    else if (node->type == CONDITION)
+    {
+        char playerInput[16] = ""; // Todo - give text nodes their own char for storing text
+        char conditionValue[16] = ""; // Todo - give text nodes their own char for storing text
+
+        pos.x = node_rect_min.x + (node->size.x / 2) - (IM_ARRAYSIZE(playerInput) * 3.8);
+
+        ImGui::SetCursorScreenPos(pos);
+
+        std::string label = "###" + std::to_string(node->id);
+
+        ImGui::InputText(label.c_str(), playerInput, IM_ARRAYSIZE(playerInput));
+
+        pos.y += 20;
+
+        ImGui::SetCursorScreenPos(pos);
+
+        label = "###" + std::to_string(node->id) + "Value";
+
+        ImGui::InputText(label.c_str(), conditionValue, IM_ARRAYSIZE(conditionValue));
+    }
+    else if (node->type == VALUE)
+    {
+        char playerInput[16] = ""; // Todo - give text nodes their own char for storing text
+        char conditionValue[16] = ""; // Todo - give text nodes their own char for storing text
+
+        pos.x = node_rect_min.x + (node->size.x / 2) - (IM_ARRAYSIZE(playerInput) * 3.8);
+
+        ImGui::SetCursorScreenPos(pos);
+
+        std::string label = "###" + std::to_string(node->id);
+
+        ImGui::InputText(label.c_str(), playerInput, IM_ARRAYSIZE(playerInput));
+
+        pos.y += 20;
+
+        ImGui::SetCursorScreenPos(pos);
+
+        label = "###" + std::to_string(node->id) + "Value";
+
+        ImGui::InputText(label.c_str(), conditionValue, IM_ARRAYSIZE(conditionValue));
+    }
     else
     {
         char playerInput[16] = ""; // Todo - give text nodes their own char for storing text
@@ -244,7 +286,12 @@ void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_select
 
         if (connection_selected && ImGui::IsMouseReleased(0) && connection_selected.get() != node)
         {
-            connection_selected->outputConnections.push_back(node);
+            std::vector<Node*>::iterator it = std::find(connection_selected->outputConnections.begin(), connection_selected->outputConnections.end(), node);
+
+            if (it == connection_selected->outputConnections.end())
+            {
+                connection_selected->outputConnections.push_back(node);
+            }
 
             connection_selected.release();
         }
@@ -275,7 +322,6 @@ void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_select
 
     draw_list->ChannelsSetCurrent(1); // set to background
 
-
     ImColor color = IM_COL32_WHITE;
 
     ImVec2 conMin = ImVec2(node_rect_min.x + node->size.x - 3.5f, node_rect_min.y + (node->size.y / 2.5f) - 3.5f);
@@ -287,7 +333,7 @@ void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_select
 
         color = IM_COL32_BLACK;
 
-        if (!connection_selected && ImGui::IsMouseDown(0))
+        if (!connection_selected && ImGui::IsMouseDown(0) && !ImGui::IsMouseDragging(0))
         {
             connection_selected = std::unique_ptr<Node>(node);
 
@@ -602,7 +648,7 @@ int main()
                     mousePos.x -= 325;
                     mousePos.y -= 100;
 
-                    nodes.push_back(CreateNode(++nodeNum, "Condition Node", { 160,50 }, mousePos, CONDITION));
+                    nodes.push_back(CreateNode(++nodeNum, "Condition Node", { 160,70 }, mousePos, CONDITION));
                 }
                 else if (ImGui::MenuItem("Add Value Node"))
                 {
@@ -610,7 +656,7 @@ int main()
                     mousePos.x -= 325;
                     mousePos.y -= 100;
 
-                    nodes.push_back(CreateNode(++nodeNum, "Value Node", { 160,50 }, mousePos, VALUE));
+                    nodes.push_back(CreateNode(++nodeNum, "Value Node", { 160,70 }, mousePos, VALUE));
                 }
 
                 ImGui::EndPopup();
