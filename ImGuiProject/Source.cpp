@@ -23,6 +23,8 @@
 #include <string>
 #include <iostream>
 
+#include "node.cpp"
+
 static inline ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs) { return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y); }
 static inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs) { return ImVec2(lhs.x - rhs.x, lhs.y - rhs.y); }
 
@@ -37,28 +39,6 @@ static bool show_grid = true;
 static int nodeNum = 0;
 
 bool connectionHovered = false;
-
-enum NodeType
-{
-    DEFAULT,
-    DIALOGUE,   // Stores normal dialogue
-    CHOICE,     // Stores choice text
-    CONDITION,  // Checks if value meets condition - text for con name and value field for value
-    VALUE       // Sets variable value - text for name and field for value to set it to
-};
-
-struct Node
-{
-    int id = -1;
-    const char* name = "noName";
-
-    ImVec2 pos;
-    ImVec2 size;
-
-    NodeType type = DEFAULT;
-
-    std::vector<Node*> outputConnections;
-}; //TODO - Convert to class with subnode classes
 
 std::unique_ptr<Node> connection_selected;
 
@@ -172,6 +152,11 @@ void DrawHermiteCurve(ImDrawList* drawList, ImVec2 p1, ImVec2 p2, int STEPS) // 
 //    }
 //}
 
+void DrawNodeFeatures(Node* node, ImVec2& pos, ImVec2& node_rect_min)
+{
+    node->DrawNode(node, pos, node_rect_min);
+}
+
 void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_selected) // Todo - go back add connections and dragging
 {
     draw_list->ChannelsSplit(2);
@@ -201,83 +186,14 @@ void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_select
 
     pos.y += 20;
 
-    if (node->type == DIALOGUE)
-    {
-        char playerInput[16] = ""; // Todo - give text nodes their own char for storing text
-
-        pos.x = node_rect_min.x + (node->size.x / 2) - (IM_ARRAYSIZE(playerInput) * 3.8);
-
-        ImGui::SetCursorScreenPos(pos);
-
-        std::string label = "###" + std::to_string(node->id);
-
-        ImGui::InputText(label.c_str(), playerInput, IM_ARRAYSIZE(playerInput));
-
-        //node_rect_max = node_rect_max + ImVec2(IM_ARRAYSIZE(playerInput) * 3.5, 0);
-    }
-    else if (node->type == CONDITION)
-    {
-        char playerInput[16] = ""; // Todo - give text nodes their own char for storing text
-        char conditionValue[16] = ""; // Todo - give text nodes their own char for storing text
-
-        pos.x = node_rect_min.x + (node->size.x / 2) - (IM_ARRAYSIZE(playerInput) * 3.8);
-
-        ImGui::SetCursorScreenPos(pos);
-
-        std::string label = "###" + std::to_string(node->id);
-
-        ImGui::InputText(label.c_str(), playerInput, IM_ARRAYSIZE(playerInput));
-
-        pos.y += 20;
-
-        ImGui::SetCursorScreenPos(pos);
-
-        label = "###" + std::to_string(node->id) + "Value";
-
-        ImGui::InputText(label.c_str(), conditionValue, IM_ARRAYSIZE(conditionValue));
-    }
-    else if (node->type == VALUE)
-    {
-        char playerInput[16] = ""; // Todo - give text nodes their own char for storing text
-        char conditionValue[16] = ""; // Todo - give text nodes their own char for storing text
-
-        pos.x = node_rect_min.x + (node->size.x / 2) - (IM_ARRAYSIZE(playerInput) * 3.8);
-
-        ImGui::SetCursorScreenPos(pos);
-
-        std::string label = "###" + std::to_string(node->id);
-
-        ImGui::InputText(label.c_str(), playerInput, IM_ARRAYSIZE(playerInput));
-
-        pos.y += 20;
-
-        ImGui::SetCursorScreenPos(pos);
-
-        label = "###" + std::to_string(node->id) + "Value";
-
-        ImGui::InputText(label.c_str(), conditionValue, IM_ARRAYSIZE(conditionValue));
-    }
-    else
-    {
-        char playerInput[16] = ""; // Todo - give text nodes their own char for storing text
-
-        pos.x = node_rect_min.x + (node->size.x / 2) - (IM_ARRAYSIZE(playerInput) * 3.8);
-
-        ImGui::SetCursorScreenPos(pos);
-
-        std::string label = "###" + std::to_string(node->id);
-
-        ImGui::InputText(label.c_str(), playerInput, IM_ARRAYSIZE(playerInput));
-
-        //node_rect_max = node_rect_max + ImVec2(IM_ARRAYSIZE(playerInput) * 3.5, 0);
-    }
+    DrawNodeFeatures(node, pos, node_rect_min);
 
     bool node_widgets_active = (!old_any_active && ImGui::IsAnyItemActive());
 
     draw_list->ChannelsSetCurrent(0); // set to background
 
-    ImGui::SetCursorScreenPos(node_rect_min);
-    ImGui::InvisibleButton("node", node->size);
+    ImGui::SetCursorScreenPos(node_rect_min + ImVec2(NODE_WINDOW_PADDING.x, 0));
+    ImGui::InvisibleButton("node", node->size - ImVec2(NODE_WINDOW_PADDING.x * 2, NODE_WINDOW_PADDING.y));
 
     if (ImGui::IsItemHovered())
     {
@@ -316,7 +232,7 @@ void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_select
 
     // Draw text bg area
     //draw_list->AddRectFilled(node_rect_min + ImVec2(1, 1), titleArea, ImColor(100, 0, 0), 4.0f);
-    draw_list->AddRect(node_rect_min, node_rect_max, ImColor(100, 100, 100), 4.0f);
+    draw_list->AddRect(node_rect_min, node_rect_max, ImColor(100, 100, 100), 4.0f, 15, 2);
 
     ImGui::EndGroup();
 
@@ -390,11 +306,30 @@ void RenderLines(ImDrawList* draw_list, ImVec2 offset)
 
         DrawHermiteCurve(draw_list, offset + connection_selected->pos + ImVec2(connection_selected->size.x + 4, connection_selected->size.y / 2.5f), mouse, 15);
     }
-} // TODO - add way to remove lines/connections
+} // TODO - add way to remove lines/connections & fix leftover lines after delete
 
 static Node* CreateNode(int id, const char* name, ImVec2 size, ImVec2 pos = {0,0}, NodeType nodeType = DEFAULT)
 {
-    Node* node = new Node();
+    Node* node;
+
+    switch (nodeType)
+    {
+    case DIALOGUE:
+        node = new DialogueNode();
+        break;
+    case CHOICE:
+        node = new ChoiceNode();
+        break;
+    case CONDITION:
+        node = new ConditionNode();
+        break;
+    case VALUE:
+        node = new ValueNode();
+        break;
+    default:
+        node = new Node();
+        break;
+    }
 
     node->id = id;
     node->name = name;
@@ -474,12 +409,10 @@ int main()
 
         if (nodes.size() == 0)
         {
-            nodes.push_back(CreateNode(++nodeNum, "Name Node", { 160,50 }, { 25, 40 }, DIALOGUE));
-            nodes.push_back(CreateNode(++nodeNum, "Name Node", { 160,50 }, { 250, 80 }, DIALOGUE));
-            nodes.push_back(CreateNode(++nodeNum, "Name Node", { 160,50 }, { 500, 120 }, DIALOGUE));
+            nodes.push_back(CreateNode(-1, "Default Node", { 160,50 }, { 25, 40 }, DEFAULT));
+            nodes.push_back(CreateNode(++nodeNum, "Example Dialogue Node", { 400,110 }, { 250, 80 }, DIALOGUE));
 
             nodes[0]->outputConnections.push_back(nodes[1]);
-            nodes[1]->outputConnections.push_back(nodes[2]);
         }
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -632,7 +565,7 @@ int main()
                     mousePos.x -= 325;
                     mousePos.y -= 100;
 
-                    nodes.push_back(CreateNode(++nodeNum, "Dialogue Node", { 160,50 }, mousePos, DIALOGUE));
+                    nodes.push_back(CreateNode(++nodeNum, "Dialogue Node", { 395,105 }, mousePos, DIALOGUE));
                 }
                 else if (ImGui::MenuItem("Add Choice Node"))
                 {
@@ -640,7 +573,7 @@ int main()
                     mousePos.x -= 325;
                     mousePos.y -= 100;
 
-                    nodes.push_back(CreateNode(++nodeNum, "Choice Node", { 160,50 }, mousePos, CHOICE));
+                    nodes.push_back(CreateNode(++nodeNum, "Choice Node", { 200,80 }, mousePos, CHOICE));
                 }
                 else if (ImGui::MenuItem("Add Condition Node"))
                 {
@@ -648,7 +581,7 @@ int main()
                     mousePos.x -= 325;
                     mousePos.y -= 100;
 
-                    nodes.push_back(CreateNode(++nodeNum, "Condition Node", { 160,70 }, mousePos, CONDITION));
+                    nodes.push_back(CreateNode(++nodeNum, "Condition Node", { 200,80 }, mousePos, CONDITION));
                 }
                 else if (ImGui::MenuItem("Add Value Node"))
                 {
@@ -656,7 +589,7 @@ int main()
                     mousePos.x -= 325;
                     mousePos.y -= 100;
 
-                    nodes.push_back(CreateNode(++nodeNum, "Value Node", { 160,70 }, mousePos, VALUE));
+                    nodes.push_back(CreateNode(++nodeNum, "Value Node", { 200,80 }, mousePos, VALUE));
                 }
 
                 ImGui::EndPopup();
@@ -711,6 +644,11 @@ int main()
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);
+    }
+
+    for (Node* node : nodes)
+    {
+        delete node;
     }
 
     // Cleanup

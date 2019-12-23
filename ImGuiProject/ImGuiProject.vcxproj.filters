@@ -45,6 +45,9 @@
     <ClCompile Include="..\Include\glad\src\glad.c">
       <Filter>glad</Filter>
     </ClCompile>
+    <ClCompile Include="Node.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Include\ImGui\imconfig.h">

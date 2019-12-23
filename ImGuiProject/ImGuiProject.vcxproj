@@ -148,6 +148,7 @@
     <ClCompile Include="..\Include\ImGui\imgui_impl_glfw.cpp" />
     <ClCompile Include="..\Include\ImGui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="..\Include\ImGui\imgui_widgets.cpp" />
+    <ClCompile Include="Node.cpp" />
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
