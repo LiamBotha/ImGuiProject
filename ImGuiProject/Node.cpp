@@ -6,6 +6,7 @@
 #include <imgui.h>
 #include <vector>
 #include <string>
+#include <nlohmann/json.hpp>
 
 enum NodeType
 {
@@ -34,6 +35,12 @@ public:
     {
 
     }
+
+    virtual void SaveTypeData(nlohmann::json& nodeJson, int i)
+    {
+
+    }
+
 }; //TODO - Convert to class with subnode classes
 
 class DialogueNode : public Node
@@ -52,6 +59,11 @@ public:
         //ImGui::SetNextItemWidth(IM_ARRAYSIZE(dialogueLine) * 7);
         ImGui::InputTextMultiline(label.c_str(), dialogueLine, IM_ARRAYSIZE(dialogueLine), ImVec2(375,65), ImGuiInputTextFlags_NoHorizontalScroll);
     }
+
+    void SaveTypeData(nlohmann::json& nodeJson, int i)
+    {
+        nodeJson[i]["Dialogue"] = dialogueLine;
+    }
 };
 
 class ChoiceNode : public Node
@@ -69,6 +81,11 @@ public:
 
         //ImGui::InputText(label.c_str(), choiceLine, IM_ARRAYSIZE(choiceLine));
         ImGui::InputTextMultiline(label.c_str(), choiceLine, IM_ARRAYSIZE(choiceLine), ImVec2(180, 40), ImGuiInputTextFlags_NoHorizontalScroll);
+    }
+
+    void SaveTypeData(nlohmann::json& nodeJson, int i)
+    {
+        nodeJson[i]["Choice"] = choiceLine;
     }
 };
 
@@ -103,6 +120,13 @@ class ConditionNode : public Node
         ImGui::SetCursorScreenPos(pos);
         ImGui::InputText(label.c_str(), conditionValue, IM_ARRAYSIZE(conditionValue));
     }
+
+    void SaveTypeData(nlohmann::json& nodeJson, int i)
+    {
+        nodeJson[i]["Condition Variable"] = playerInput;
+        nodeJson[i]["Condition Value"] = conditionValue;
+    }
+
 };
 
 class ValueNode : public Node
@@ -136,6 +160,13 @@ class ValueNode : public Node
         ImGui::SetCursorScreenPos(pos);
         ImGui::InputText(label.c_str(), conditionValue, IM_ARRAYSIZE(conditionValue));
     }
+
+    void SaveTypeData(nlohmann::json& nodeJson, int i)
+    {
+        nodeJson[i]["Condition Variable"] = playerInput;
+        nodeJson[i]["Condition Value"] = conditionValue;
+    }
+
 };
 
 #endif // !NODE
