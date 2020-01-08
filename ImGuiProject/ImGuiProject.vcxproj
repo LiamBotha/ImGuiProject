@@ -87,7 +87,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\User\source\repos\ImGuiProject\Include\ImGui;C:\Users\User\Documents\Visual Studio 2019\Libraries\glfw-3.3.bin.WIN32\include;C:\Users\User\source\repos\ImGuiProject\Include\glad\include;C:\Users\User\Documents\Visual Studio 2019\Libraries\json-develop\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\User\source\repos\ImGuiProject\Include\ImGui;C:\Users\User\Documents\Visual Studio 2019\Libraries\glfw-3.3.bin.WIN32\include;C:\Users\User\source\repos\ImGuiProject\Include\glad\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
