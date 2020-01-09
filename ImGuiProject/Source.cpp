@@ -1,9 +1,9 @@
 
-#include "imgui.h"
-#include "imgui_internal.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-#include "stdio.h"
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
+#include <stdio.h>
 
 #if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
 #include <GL/gl3w.h>    // Initialize with gl3wInit()
@@ -24,6 +24,7 @@
 #include <iostream>
 
 #include "node.cpp"
+#include "Source.h"
 
 static inline ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs) { return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y); }
 static inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs) { return ImVec2(lhs.x - rhs.x, lhs.y - rhs.y); }
@@ -66,91 +67,6 @@ void DrawHermiteCurve(ImDrawList* drawList, ImVec2 p1, ImVec2 p2, int STEPS) // 
 
     drawList->PathStroke(ImColor(200, 200, 100), false, 3.0f);
 }
-
-//void UpdateDragging(ImVec2 offset)
-//{
-//    switch (s_dragState)
-//    {
-//    case DragState_Default:
-//    {
-//        ImVec2 pos;
-//        Connection* con = GetHoverCon(offset, &pos);
-//
-//        if (con)
-//        {
-//            s_dragNode.con = con;
-//            s_dragNode.pos = pos;
-//            s_dragState = DragState_Hover;
-//            return;
-//        }
-//
-//        break;
-//    }
-//
-//    case DragState_Hover:
-//    {
-//        ImVec2 pos;
-//        Connection* con = GetHoverCon(offset, &pos);
-//
-//        // Make sure we are still hovering the same node
-//
-//        if (con != s_dragNode.con)
-//        {
-//            s_dragNode.con = 0;
-//            s_dragState = DragState_Default;
-//            return;
-//        }
-//
-//        if (ImGui::IsMouseClicked(0) && s_dragNode.con)
-//            s_dragState = DragState_Draging;
-//
-//        break;
-//    }
-//
-//    case DragState_BeginDrag:
-//    {
-//        break;
-//    }
-//
-//    case DragState_Draging:
-//    {
-//        ImDrawList* drawList = ImGui::GetWindowDrawList();
-//
-//        drawList->ChannelsSetCurrent(0); // Background
-//
-//        DrawHermiteCurve(drawList, s_dragNode.pos, ImGui::GetIO().MousePos, 12);
-//
-//        if (!ImGui::IsMouseDown(0))
-//        {
-//            ImVec2 pos;
-//            Connection* con = GetHoverCon(offset, &pos);
-//
-//            // Make sure we are still hovering the same node
-//
-//            if (con == s_dragNode.con)
-//            {
-//                s_dragNode.con = 0;
-//                s_dragState = DragState_Default;
-//                return;
-//            }
-//
-//            // Lets connect the nodes.
-//            // TODO: Make sure we connect stuff in the correct way!
-//
-//            con->input = s_dragNode.con;
-//            s_dragNode.con = 0;
-//            s_dragState = DragState_Default;
-//        }
-//
-//        break;
-//    }
-//
-//    case DragState_Connect:
-//    {
-//        break;
-//    }
-//    }
-//}
 
 void DrawNodeFeatures(Node* node, ImVec2& pos, ImVec2& node_rect_min)
 {
@@ -346,6 +262,250 @@ static Node* CreateNode(int id, const char* name, ImVec2 size, ImVec2 pos = {0,0
     return node;
 }
 
+void ShowDemoWindows(bool& show_demo_window, bool& show_another_window, ImVec4& clear_color)
+{
+    // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+    if (show_demo_window)
+        ImGui::ShowDemoWindow(&show_demo_window);
+
+    // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+    {
+        static float f = 0.0f;
+        static int counter = 0;
+
+        ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+        ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+        ImGui::Checkbox("Another Window", &show_another_window);
+
+        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+        ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+            counter++;
+        ImGui::SameLine();
+        ImGui::Text("counter = %d", counter);
+
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::End();
+    }
+
+    // 3. Show another simple window.
+    if (show_another_window)
+    {
+
+        ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+        ImGui::Text("Hello from another window!");
+        if (ImGui::Button("Close Me"))
+            show_another_window = false;
+        ImGui::End();
+    }
+}
+
+void NodeListRender(const ImGuiWindowFlags& window_flags, int& node_hovered_in_list, bool& open_context_menu)
+{
+    ImGui::SetNextWindowBgAlpha(0.5f);
+    ImGui::BeginChild("node_list", ImVec2(100, 0), false, window_flags);
+    ImGui::Text("Nodes");
+    ImGui::Separator();
+
+    for (size_t i = 0; i < nodes.size(); ++i)
+    {
+        Node* node = nodes[i];
+
+        ImGui::PushID(node->id);
+
+        if (ImGui::Selectable(node->name, node->id == node_selected))
+            node_selected = node->id;
+        if (ImGui::IsItemHovered())
+        {
+            node_hovered_in_list = node->id;
+            open_context_menu |= ImGui::IsMouseClicked(1);
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::EndChild();
+}
+
+void DrawContextMenues(ImVec2& scrolling)
+{
+    // Draw context menu
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+    if (ImGui::BeginPopup("context_menu"))
+    {
+        if (ImGui::MenuItem("Add Dialogue Node"))
+        {
+            ImVec2 mousePos = ImGui::GetMousePos() - scrolling;
+            mousePos.x -= 325;
+            mousePos.y -= 100;
+
+            nodes.push_back(CreateNode(++nodeNum, "Dialogue Node", { 395,105 }, mousePos, DIALOGUE));
+        }
+        else if (ImGui::MenuItem("Add Choice Node"))
+        {
+            ImVec2 mousePos = ImGui::GetMousePos() - scrolling;
+            mousePos.x -= 325;
+            mousePos.y -= 100;
+
+            nodes.push_back(CreateNode(++nodeNum, "Choice Node", { 200,80 }, mousePos, CHOICE));
+        }
+        else if (ImGui::MenuItem("Add Condition Node"))
+        {
+            ImVec2 mousePos = ImGui::GetMousePos() - scrolling;
+            mousePos.x -= 325;
+            mousePos.y -= 100;
+
+            nodes.push_back(CreateNode(++nodeNum, "Condition Node", { 200,80 }, mousePos, CONDITION));
+        }
+        else if (ImGui::MenuItem("Add Value Node"))
+        {
+            ImVec2 mousePos = ImGui::GetMousePos() - scrolling;
+            mousePos.x -= 325;
+            mousePos.y -= 100;
+
+            nodes.push_back(CreateNode(++nodeNum, "Value Node", { 200,80 }, mousePos, VALUE));
+        }
+
+        ImGui::EndPopup();
+    }
+    ImGui::PopStyleVar();
+
+    // Draw context menu
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+    if (ImGui::BeginPopup("node_menu"))
+    {
+        if (ImGui::MenuItem("Delete Node"))
+        {
+            for (int i = 0; i < nodes.size(); ++i)
+            {
+                if (nodes[i]->id == node_selected)
+                {
+                    nodes.erase(nodes.begin() + i);
+                    continue;
+                }
+
+                for (int j = 0; j < nodes[i]->outputConnections.size(); ++j)
+                {
+                    if (nodes[i]->outputConnections[j]->id == node_selected)
+                    {
+                        nodes[i]->outputConnections.erase(nodes[i]->outputConnections.begin() + j);
+                    }
+                }
+            }
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::PopStyleVar();
+}
+
+void OpenContextMenu(int& node_hovered_in_list, int& node_hovered_in_scene, bool& open_context_menu, bool& open_node_menu)
+{
+    // Open context menu
+    if (!ImGui::IsAnyItemHovered() && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(1))
+    {
+        node_selected = node_hovered_in_list = node_hovered_in_scene = -1;
+        open_context_menu = true;
+    }
+    else if (ImGui::IsAnyItemHovered() && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(1))
+    {
+        if (node_selected != -1)
+            open_node_menu = true;
+    }
+    if (open_context_menu)
+    {
+        ImGui::OpenPopup("context_menu");
+    }
+    else if (open_node_menu)
+    {
+        ImGui::OpenPopup("node_menu");
+    }
+}
+
+void DrawGrid(ImVec2& scrolling, ImDrawList* draw_list)
+{
+    if (true) // draws grid into window
+    {
+        ImU32 GRID_COLOR = IM_COL32(200, 200, 200, 40);
+        float GRID_SZ = 64.0f;
+        ImVec2 win_pos = ImGui::GetCursorScreenPos();
+        ImVec2 canvas_sz = ImGui::GetWindowSize();
+        for (float x = fmodf(scrolling.x, GRID_SZ); x < canvas_sz.x; x += GRID_SZ)
+            draw_list->AddLine(ImVec2(x, 0.0f) + win_pos, ImVec2(x, canvas_sz.y) + win_pos, GRID_COLOR);
+        for (float y = fmodf(scrolling.y, GRID_SZ); y < canvas_sz.y; y += GRID_SZ)
+            draw_list->AddLine(ImVec2(0.0f, y) + win_pos, ImVec2(canvas_sz.x, y) + win_pos, GRID_COLOR);
+    }
+}
+
+void HandleNodes()
+{
+    ImGuiWindowFlags window_flags = 0;
+    window_flags |= ImGuiWindowFlags_NoBackground;
+    window_flags |= ImGuiWindowFlags_NoDecoration;
+
+    bool open_context_menu = false;
+    bool open_node_menu = false;
+    int node_hovered_in_list = -1;
+    int node_hovered_in_scene = -1;
+
+    connectionHovered = false;
+
+    static ImVec2 scrolling = ImVec2(0.0f, 0.0f);
+
+    NodeListRender(window_flags, node_hovered_in_list, open_context_menu);
+
+    ImGui::SameLine();
+    ImGui::BeginGroup();
+
+    // Create our child canvas
+    //ImGui::Text("Hold middle mouse button to scroll (%.2f,%.2f)", scrolling.x, scrolling.y);
+    //ImGui::SameLine(ImGui::GetWindowWidth() - 100);
+    //ImGui::Checkbox("Show grid", &show_grid);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, IM_COL32(60, 60, 70, 200));
+    ImGui::BeginChild("scrolling_region", ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove);
+    ImGui::PushItemWidth(120.0f);
+
+    ImVec2 offset = ImGui::GetCursorScreenPos() + scrolling;
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+    DrawGrid(scrolling, draw_list);
+
+    // Display links
+    //draw_list->ChannelsSplit(2);
+    //draw_list->ChannelsSetCurrent(0); // Background
+
+    RenderLines(draw_list, offset);
+
+    //Display Nodes
+    for (Node* node : nodes)
+    {
+        DrawNode(draw_list, node, offset, node_selected);
+    }
+
+    if (connectionHovered == false && ImGui::IsMouseReleased(0))
+    {
+        connection_selected.release();
+    }
+
+    OpenContextMenu(node_hovered_in_list, node_hovered_in_scene, open_context_menu, open_node_menu);
+
+    DrawContextMenues(scrolling);
+
+    // Scrolling
+    if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemActive() && ImGui::IsMouseDragging(2, 0.0f))
+        scrolling = scrolling + ImGui::GetIO().MouseDelta;
+
+    ImGui::PopItemWidth();
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar(2);
+    ImGui::EndGroup();
+}
+
 int main()
 {
     // Setup window
@@ -415,224 +575,9 @@ int main()
             nodes[0]->outputConnections.push_back(nodes[1]);
         }
 
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
+        //ShowDemoWindows(show_demo_window, show_another_window, clear_color);
 
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-        {
-            static float f = 0.0f;
-            static int counter = 0;
-
-            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
-
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
-
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-            ImGui::End();
-        }
-
-        // 3. Show another simple window.
-        if (show_another_window)
-        {
-
-            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me"))
-                show_another_window = false;
-            ImGui::End();
-        }
-
-        {
-            bool open_context_menu = false;
-            bool open_node_menu = false;
-            int node_hovered_in_list = -1;
-            int node_hovered_in_scene = -1;
-
-            connectionHovered = false;
-
-            static ImVec2 scrolling = ImVec2(0.0f, 0.0f);
-
-            ImGui::BeginChild("node_list", ImVec2(100, 0));
-            ImGui::Text("Nodes");
-            ImGui::Separator();
-
-            for (size_t i = 0; i < nodes.size(); ++i)
-            {
-                Node* node = nodes[i];
-
-                ImGui::PushID(node->id);
-
-                if (ImGui::Selectable(node->name, node->id == node_selected))
-                    node_selected = node->id;
-                if (ImGui::IsItemHovered())
-                {
-                    node_hovered_in_list = node->id;
-                    open_context_menu |= ImGui::IsMouseClicked(1);
-                }
-
-                ImGui::PopID();
-            }
-
-            ImGui::EndChild();
-
-            ImGui::SameLine();
-            ImGui::BeginGroup();
-
-            // Create our child canvas
-            //ImGui::Text("Hold middle mouse button to scroll (%.2f,%.2f)", scrolling.x, scrolling.y);
-            //ImGui::SameLine(ImGui::GetWindowWidth() - 100);
-            //ImGui::Checkbox("Show grid", &show_grid);
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-            ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, IM_COL32(60, 60, 70, 200));
-            ImGui::BeginChild("scrolling_region", ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove);
-            ImGui::PushItemWidth(120.0f);
-
-            ImVec2 offset = ImGui::GetCursorScreenPos() + scrolling;
-            ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-            if (true) // draws grid into window
-            {
-                ImU32 GRID_COLOR = IM_COL32(200, 200, 200, 40);
-                float GRID_SZ = 64.0f;
-                ImVec2 win_pos = ImGui::GetCursorScreenPos();
-                ImVec2 canvas_sz = ImGui::GetWindowSize();
-                for (float x = fmodf(scrolling.x, GRID_SZ); x < canvas_sz.x; x += GRID_SZ)
-                    draw_list->AddLine(ImVec2(x, 0.0f) + win_pos, ImVec2(x, canvas_sz.y) + win_pos, GRID_COLOR);
-                for (float y = fmodf(scrolling.y, GRID_SZ); y < canvas_sz.y; y += GRID_SZ)
-                    draw_list->AddLine(ImVec2(0.0f, y) + win_pos, ImVec2(canvas_sz.x, y) + win_pos, GRID_COLOR);
-            }
-
-            // Display links
-            //draw_list->ChannelsSplit(2);
-            //draw_list->ChannelsSetCurrent(0); // Background
-
-            RenderLines(draw_list, offset);
-
-            //Display Nodes
-            for (Node* node : nodes)
-            {
-                DrawNode(draw_list, node, offset,node_selected);
-            }
-
-            //draw_list->ChannelsSetCurrent(0); // set to background
-            //UpdateDragging(scrolling);
-
-
-            if (connectionHovered == false && ImGui::IsMouseReleased(0))
-            {
-                connection_selected.release();
-            }
-
-            // Open context menu
-            if (!ImGui::IsAnyItemHovered() && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(1))
-            {
-                node_selected = node_hovered_in_list = node_hovered_in_scene = -1;
-                open_context_menu = true;
-            }
-            else if (ImGui::IsAnyItemHovered() && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(1))
-            {
-                if (node_selected != -1)
-                    open_node_menu = true;
-            }
-            if (open_context_menu)
-            {
-                ImGui::OpenPopup("context_menu");
-            }
-            else if(open_node_menu)
-            {
-                ImGui::OpenPopup("node_menu");
-            }
-
-            // Draw context menu
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
-            if (ImGui::BeginPopup("context_menu"))
-            {
-                if (ImGui::MenuItem("Add Dialogue Node"))
-                {
-                    ImVec2 mousePos = ImGui::GetMousePos() - scrolling;
-                    mousePos.x -= 325;
-                    mousePos.y -= 100;
-
-                    nodes.push_back(CreateNode(++nodeNum, "Dialogue Node", { 395,105 }, mousePos, DIALOGUE));
-                }
-                else if (ImGui::MenuItem("Add Choice Node"))
-                {
-                    ImVec2 mousePos = ImGui::GetMousePos() - scrolling;
-                    mousePos.x -= 325;
-                    mousePos.y -= 100;
-
-                    nodes.push_back(CreateNode(++nodeNum, "Choice Node", { 200,80 }, mousePos, CHOICE));
-                }
-                else if (ImGui::MenuItem("Add Condition Node"))
-                {
-                    ImVec2 mousePos = ImGui::GetMousePos() - scrolling;
-                    mousePos.x -= 325;
-                    mousePos.y -= 100;
-
-                    nodes.push_back(CreateNode(++nodeNum, "Condition Node", { 200,80 }, mousePos, CONDITION));
-                }
-                else if (ImGui::MenuItem("Add Value Node"))
-                {
-                    ImVec2 mousePos = ImGui::GetMousePos() - scrolling;
-                    mousePos.x -= 325;
-                    mousePos.y -= 100;
-
-                    nodes.push_back(CreateNode(++nodeNum, "Value Node", { 200,80 }, mousePos, VALUE));
-                }
-
-                ImGui::EndPopup();
-            }
-            ImGui::PopStyleVar();
-
-            // Draw context menu
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
-            if (ImGui::BeginPopup("node_menu"))
-            {
-                if (ImGui::MenuItem("Delete Node"))
-                {
-                    for (int i = 0; i < nodes.size(); ++i)
-                    {
-                        if (nodes[i]->id == node_selected)
-                        {
-                            nodes.erase(nodes.begin() + i);
-                            continue;
-                        }
-                        
-                        for (int j = 0; j < nodes[i]->outputConnections.size(); ++j)
-                        {
-                            if (nodes[i]->outputConnections[j]->id == node_selected)
-                            {
-                                nodes[i]->outputConnections.erase(nodes[i]->outputConnections.begin() + j);
-                            }
-                        }
-                    }
-                }
-                ImGui::EndPopup();
-            }
-            ImGui::PopStyleVar();
-
-            // Scrolling
-            if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemActive() && ImGui::IsMouseDragging(2, 0.0f))
-                scrolling = scrolling + ImGui::GetIO().MouseDelta;
-
-            ImGui::PopItemWidth();
-            ImGui::EndChild();
-            ImGui::PopStyleColor();
-            ImGui::PopStyleVar(2);
-            ImGui::EndGroup();
-        }
+        HandleNodes();
 
         // Rendering
         ImGui::Render();

@@ -71,6 +71,9 @@
     <ClInclude Include="..\Include\glad\include\KHR\khrplatform.h">
       <Filter>glad</Filter>
     </ClInclude>
+    <ClInclude Include="Source.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\Include\ImGui\imgui.natvis">

@@ -159,6 +159,7 @@
     <ClInclude Include="..\Include\ImGui\imgui_impl_glfw.h" />
     <ClInclude Include="..\Include\ImGui\imgui_impl_opengl3.h" />
     <ClInclude Include="..\Include\ImGui\imgui_internal.h" />
+    <ClInclude Include="Source.h" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\Include\ImGui\imgui.natvis" />
