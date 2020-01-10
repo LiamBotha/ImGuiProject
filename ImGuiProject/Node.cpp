@@ -28,7 +28,20 @@ public:
 
     NodeType type = DEFAULT;
 
+    ImColor bgColor;
+    ImColor hoverBgColor;
+    ImColor borderColor;
+    ImVec4 textboxColor;
+
     std::vector<Node*> outputConnections;
+
+    Node()
+    {
+        bgColor = ImColor(60, 60, 60);
+        hoverBgColor = ImColor(75, 75, 75);
+        borderColor = ImColor(100, 100, 100);
+        textboxColor = ImColor(80, 80, 80);
+    }
 
     virtual void DrawNode(Node* node, ImVec2& pos, ImVec2& node_rect_min)
     {
@@ -41,8 +54,17 @@ class DialogueNode : public Node
 public:
     char dialogueLine[320] = "";
 
+    DialogueNode()
+    {
+        bgColor = ImColor(60, 60, 60);
+        hoverBgColor = ImColor(75, 75, 75);
+        borderColor = ImColor(100, 100, 100);
+    }
+
     void DrawNode(Node* node, ImVec2& pos, ImVec2& node_rect_min)
     {
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, textboxColor);
+
         pos.x = node_rect_min.x + (node->size.x / 2) - (375 / 2);
 
         ImGui::SetCursorScreenPos(pos);
@@ -51,6 +73,8 @@ public:
 
         //ImGui::SetNextItemWidth(IM_ARRAYSIZE(dialogueLine) * 7);
         ImGui::InputTextMultiline(label.c_str(), dialogueLine, IM_ARRAYSIZE(dialogueLine), ImVec2(375,65), ImGuiInputTextFlags_NoHorizontalScroll);
+
+        ImGui::PopStyleColor();
     }
 };
 
@@ -58,6 +82,13 @@ class ChoiceNode : public Node
 {
 public:
     char choiceLine[100] = "";
+
+    ChoiceNode()
+    {
+        bgColor = ImColor(60, 60, 60);
+        hoverBgColor = ImColor(75, 75, 75);
+        borderColor = ImColor(100, 100, 100);
+    }
 
     void DrawNode(Node* node, ImVec2& pos, ImVec2& node_rect_min)
     {
@@ -68,17 +99,30 @@ public:
         std::string label = "###" + std::to_string(node->id);
 
         //ImGui::InputText(label.c_str(), choiceLine, IM_ARRAYSIZE(choiceLine));
+
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, textboxColor);
         ImGui::InputTextMultiline(label.c_str(), choiceLine, IM_ARRAYSIZE(choiceLine), ImVec2(180, 40), ImGuiInputTextFlags_NoHorizontalScroll);
+        ImGui::PopStyleColor();
     }
 };
 
 class ConditionNode : public Node
 {
+public:
     char playerInput[16] = "";
     char conditionValue[16] = "";
 
+    ConditionNode()
+    {
+        bgColor = ImColor(60, 60, 60);
+        hoverBgColor = ImColor(75, 75, 75);
+        borderColor = ImColor(100, 100, 100);
+    }
+    
     void DrawNode(Node* node, ImVec2& pos, ImVec2& node_rect_min)
     {
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, textboxColor);
+
         pos.x = node_rect_min.x + (node->size.x / 2) - (IM_ARRAYSIZE(playerInput) * 3.8) - ImGui::CalcTextSize("aaaa ").x / 2;
 
         ImGui::SetCursorScreenPos(pos);
@@ -102,16 +146,28 @@ class ConditionNode : public Node
         pos.x += ImGui::CalcTextSize("Val ").x;
         ImGui::SetCursorScreenPos(pos);
         ImGui::InputText(label.c_str(), conditionValue, IM_ARRAYSIZE(conditionValue));
+
+        ImGui::PopStyleColor();
     }
 };
 
 class ValueNode : public Node
 {
+public:
     char playerInput[16] = "";
     char conditionValue[16] = "";
 
+    ValueNode()
+    {
+        bgColor = ImColor(60, 60, 60);
+        hoverBgColor = ImColor(75, 75, 75);
+        borderColor = ImColor(100, 100, 100);
+    }
+
     void DrawNode(Node* node, ImVec2& pos, ImVec2& node_rect_min)
     {
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, textboxColor);
+
         pos.x = node_rect_min.x + (node->size.x / 2) - (IM_ARRAYSIZE(playerInput) * 3.8) - ImGui::CalcTextSize("aaaa ").x / 2;
 
         ImGui::SetCursorScreenPos(pos);
@@ -135,6 +191,8 @@ class ValueNode : public Node
         pos.x += ImGui::CalcTextSize("Val ").x;
         ImGui::SetCursorScreenPos(pos);
         ImGui::InputText(label.c_str(), conditionValue, IM_ARRAYSIZE(conditionValue));
+
+        ImGui::PopStyleColor();
     }
 };
 

@@ -210,11 +210,11 @@ void DrawNodeGeneral(Node*& node, ImVec2& offset, ImDrawList* draw_list, int& no
     if (ImGui::IsItemActive()) // & !s_dragNode.con
         node_moving_active = true;
 
-    ImU32 node_bg_color = node_hovered_in_scene == node->id ? ImColor(75, 75, 75) : ImColor(60, 60, 60); // changes color on hover
+    ImU32 node_bg_color = node_hovered_in_scene == node->id ? node->hoverBgColor : node->bgColor; // changes color on hover
     draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, 4.0f);
 
     // Draw text bg area
-    draw_list->AddRect(node_rect_min, node_rect_max, ImColor(100, 100, 100), 4.0f, 15, 2);
+    draw_list->AddRect(node_rect_min, node_rect_max, node->borderColor, 4.0f, 15, 2);
 
     ImGui::EndGroup();
 
