@@ -1,0 +1,28 @@
+{
+  "Root": {
+    "Children": [
+      {
+        "Children": [
+          {
+            "Children": [
+              {
+                "Choice": "General",
+                "ID": 3,
+                "Name": "Choice Node",
+                "Type": 2
+              }
+            ],
+            "Dialogue": "There",
+            "ID": 2,
+            "Name": "Dialogue Node",
+            "Type": 1
+          }
+        ],
+        "Dialogue": "Hello",
+        "ID": 1,
+        "Name": "Example Dialogue Node",
+        "Type": 1
+      }
+    ]
+  }
+}

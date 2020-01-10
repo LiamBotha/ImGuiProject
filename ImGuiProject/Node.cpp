@@ -6,6 +6,7 @@
 #include <imgui.h>
 #include <vector>
 #include <string>
+#include <nlohmann/json.hpp>
 
 enum NodeType
 {
@@ -47,6 +48,12 @@ public:
     {
 
     }
+
+    virtual void SaveTypeData(nlohmann::json& nodeJson, int i)
+    {
+
+    }
+
 }; //TODO - Convert to class with subnode classes
 
 class DialogueNode : public Node
@@ -77,6 +84,11 @@ public:
 
         ImGui::PopStyleColor();
     }
+
+    void SaveTypeData(nlohmann::json& nodeJson, int i)
+    {
+        nodeJson[i]["Dialogue"] = dialogueLine;
+    }
 };
 
 class ChoiceNode : public Node
@@ -105,6 +117,11 @@ public:
         ImGui::PushStyleColor(ImGuiCol_FrameBg, textboxColor);
         ImGui::InputTextMultiline(label.c_str(), choiceLine, IM_ARRAYSIZE(choiceLine), ImVec2(180, 40), ImGuiInputTextFlags_NoHorizontalScroll);
         ImGui::PopStyleColor();
+    }
+
+    void SaveTypeData(nlohmann::json& nodeJson, int i)
+    {
+        nodeJson[i]["Choice"] = choiceLine;
     }
 };
 
@@ -152,6 +169,12 @@ public:
 
         ImGui::PopStyleColor();
     }
+
+    void SaveTypeData(nlohmann::json& nodeJson, int i)
+    {
+        nodeJson[i]["Condition Variable"] = playerInput;
+        nodeJson[i]["Condition Value"] = conditionValue;
+    }
 };
 
 class ValueNode : public Node
@@ -197,6 +220,12 @@ public:
         ImGui::InputText(label.c_str(), conditionValue, IM_ARRAYSIZE(conditionValue));
 
         ImGui::PopStyleColor();
+    }
+
+    void SaveTypeData(nlohmann::json& nodeJson, int i)
+    {
+        nodeJson[i]["Condition Variable"] = playerInput;
+        nodeJson[i]["Condition Value"] = conditionValue;
     }
 };
 

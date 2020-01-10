@@ -18,10 +18,14 @@
 // Include glfw3.h after our OpenGL definitions
 #include <GLFW/glfw3.h>
 
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
 #include <math.h>
 #include <vector>
 #include <string>
 #include <iostream>
+#include <fstream>
 
 #include "node.cpp"
 #include "Source.h"
@@ -333,6 +337,40 @@ void NodeListRender(const ImGuiWindowFlags& window_flags, int& node_hovered_in_l
     ImGui::EndChild();
 }
 
+void SaveChild(json& nodeJson, int i, Node* currentNode)
+{
+    nodeJson[i]["ID"] = currentNode->id;
+    nodeJson[i]["Name"] = currentNode->name;
+    //nodeJson[i]["Position"][0] = currentNode->pos.x;
+    //nodeJson[i]["Position"][1] = currentNode->pos.y;
+
+    nodeJson[i]["Type"] = currentNode->type;
+
+    currentNode->SaveTypeData(nodeJson, i);
+
+    for (int j = 0; j < currentNode->outputConnections.size(); ++j)
+    {
+        SaveChild(nodeJson[i]["Children"], j, currentNode->outputConnections[j]);
+    }
+}
+
+void SaveToJson()
+{
+    json nodeJson;
+
+    nodeJson["Root"]["Children"];
+
+    std::vector<Node*> currentNodes = nodes[0]->outputConnections;
+
+    for (int i = 0; i < currentNodes.size(); ++i)
+    {
+        SaveChild(nodeJson["Root"]["Children"], i, currentNodes[i]);
+    }
+
+    std::ofstream file("nodes.json");
+    file << nodeJson;
+}
+
 void DrawContextMenues(ImVec2& scrolling)
 {
     // Draw context menu
@@ -370,6 +408,10 @@ void DrawContextMenues(ImVec2& scrolling)
             mousePos.y -= 100;
 
             nodes.push_back(CreateNode(++nodeNum, "Value Node", { 200,80 }, mousePos, VALUE));
+        }
+        else if (ImGui::MenuItem("Save To File"))
+        {
+            SaveToJson();
         }
 
         ImGui::EndPopup();
