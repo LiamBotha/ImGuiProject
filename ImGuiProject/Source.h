@@ -13,3 +13,5 @@ void OpenContextMenu(int& node_hovered_in_list, int& node_hovered_in_scene, bool
 void DrawGrid(ImVec2& scrolling, ImDrawList* draw_list);
 
 void HandleNodes();
+
+int main();

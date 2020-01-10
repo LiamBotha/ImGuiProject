@@ -38,7 +38,7 @@ GLFWwindow* window;
 const ImVec2 NODE_WINDOW_PADDING(8.0f, 8.0f);
 const float NODE_SLOT_RADIUS = 5.0f;
 
-static int node_selected = -1;;
+static int node_selected = -1;
 static bool show_grid = true;
 
 static int nodeNum = 0;
@@ -310,33 +310,6 @@ void ShowDemoWindows(bool& show_demo_window, bool& show_another_window, ImVec4& 
     }
 }
 
-void NodeListRender(const ImGuiWindowFlags& window_flags, int& node_hovered_in_list, bool& open_context_menu)
-{
-    ImGui::SetNextWindowBgAlpha(0.5f);
-    ImGui::BeginChild("node_list", ImVec2(100, 0), false, window_flags);
-    ImGui::Text("Nodes");
-    ImGui::Separator();
-
-    for (size_t i = 0; i < nodes.size(); ++i)
-    {
-        Node* node = nodes[i];
-
-        ImGui::PushID(node->id);
-
-        if (ImGui::Selectable(node->name, node->id == node_selected))
-            node_selected = node->id;
-        if (ImGui::IsItemHovered())
-        {
-            node_hovered_in_list = node->id;
-            open_context_menu |= ImGui::IsMouseClicked(1);
-        }
-
-        ImGui::PopID();
-    }
-
-    ImGui::EndChild();
-}
-
 void SaveChild(json& nodeJson, int i, Node* currentNode)
 {
     nodeJson[i]["ID"] = currentNode->id;
@@ -369,6 +342,31 @@ void SaveToJson()
 
     std::ofstream file("nodes.json");
     file << nodeJson;
+}
+
+void NewFile()
+{
+    node_selected = -1;
+    nodeNum = 0;
+    connectionHovered = false;
+    connection_selected.reset();
+
+    for (Node* node : nodes)
+    {
+        delete node;
+    }
+
+    nodes = {};
+
+    nodes.push_back(CreateNode(-1, "Default Node", { 160,50 }, { 25, 40 }, DEFAULT));
+    nodes.push_back(CreateNode(++nodeNum, "Example Dialogue Node", { 400,110 }, { 250, 80 }, DIALOGUE));
+
+    nodes[0]->outputConnections.push_back(nodes[1]);
+}
+
+void LoadFile()
+{
+
 }
 
 void DrawContextMenues(ImVec2& scrolling)
@@ -484,6 +482,33 @@ void DrawGrid(ImVec2& scrolling, ImDrawList* draw_list)
     }
 }
 
+void NodeListRender(const ImGuiWindowFlags& window_flags, int& node_hovered_in_list, bool& open_context_menu)
+{
+    ImGui::SetNextWindowBgAlpha(0.5f);
+    ImGui::BeginChild("node_list", ImVec2(150, 0), false, window_flags);
+    ImGui::Text("Nodes");
+    ImGui::Separator();
+
+    for (size_t i = 0; i < nodes.size(); ++i)
+    {
+        Node* node = nodes[i];
+
+        ImGui::PushID(node->id);
+
+        if (ImGui::Selectable(node->name, node->id == node_selected))
+            node_selected = node->id;
+        if (ImGui::IsItemHovered())
+        {
+            node_hovered_in_list = node->id;
+            open_context_menu |= ImGui::IsMouseClicked(1);
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::EndChild();
+}
+
 void HandleNodes()
 {
     ImGuiWindowFlags window_flags = 0;
@@ -501,13 +526,14 @@ void HandleNodes()
 
     NodeListRender(window_flags, node_hovered_in_list, open_context_menu);
 
-    ImGui::SameLine();
+    ImGui::SetCursorPos({ 170,55 });
     ImGui::BeginGroup();
 
     // Create our child canvas
     //ImGui::Text("Hold middle mouse button to scroll (%.2f,%.2f)", scrolling.x, scrolling.y);
     //ImGui::SameLine(ImGui::GetWindowWidth() - 100);
     //ImGui::Checkbox("Show grid", &show_grid);
+
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, IM_COL32(60, 60, 70, 200));
@@ -518,10 +544,6 @@ void HandleNodes()
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
     DrawGrid(scrolling, draw_list);
-
-    // Display links
-    //draw_list->ChannelsSplit(2);
-    //draw_list->ChannelsSetCurrent(0); // Background
 
     RenderLines(draw_list, offset);
 
@@ -622,7 +644,23 @@ int main()
 
         //ShowDemoWindows(show_demo_window, show_another_window, clear_color);
 
+        ImGui::Begin("##AllWindow");
+
+        ImVec2 cursorPos = ImGui::GetCursorPos();
+
+        ImGui::SetCursorPos({ 170, cursorPos.y });
+        ImGui::BeginChild("TopBar", {500, 40});
+        if (ImGui::Button("New File", { 100,20 }))
+            NewFile();
+        ImGui::SameLine();
+        if (ImGui::Button("Load File", { 100,20 }))
+            LoadFile();
+        ImGui::EndChild();
+        ImGui::SetCursorPos(cursorPos);
+
         HandleNodes();
+
+        ImGui::End();
 
         // Rendering
         ImGui::Render();
