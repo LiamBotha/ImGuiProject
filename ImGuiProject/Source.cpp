@@ -50,181 +50,7 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-void DrawHermiteCurve(ImDrawList* drawList, ImVec2 p1, ImVec2 p2, int STEPS) // this is the line between two nodes
-{
-    ImVec2 t1 = ImVec2(+80.0f, 0.0f);
-    ImVec2 t2 = ImVec2(+80.0f, 0.0f);
-
-    for (int step = 0; step <= STEPS; step++)
-    {
-        float t = (float)step / (float)STEPS;
-        float h1 = +2 * t * t * t - 3 * t * t + 1.0f;
-        float h2 = -2 * t * t * t + 3 * t * t;
-        float h3 = t * t * t - 2 * t * t + t;
-        float h4 = t * t * t - t * t;
-        drawList->PathLineTo(ImVec2(h1 * p1.x + h2 * p2.x + h3 * t1.x + h4 * t2.x, h1 * p1.y + h2 * p2.y + h3 * t1.y + h4 * t2.y));
-    }
-
-    drawList->PathStroke(ImColor(200, 200, 100), false, 3.0f);
-}
-
-void DrawNodeFeatures(Node* node, ImVec2& pos, ImVec2& node_rect_min)
-{
-    node->DrawNode(node, pos, node_rect_min);
-}
-
-void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_selected) // Todo - go back add connections and dragging
-{
-    draw_list->ChannelsSplit(2);
-
-    int node_hovered_in_scene = -1;
-    bool open_context_menu = false;
-
-    ImVec2 mouse = ImGui::GetIO().MousePos;
-
-    // Get id & node start position
-    ImGui::PushID(node->id);
-    ImVec2 node_rect_min = offset + node->pos;
-
-    draw_list->ChannelsSetCurrent(1); // set channel to foreground
-    bool old_any_active = ImGui::IsAnyItemActive();
-
-    ImVec2 textSize = ImGui::CalcTextSize(node->name);
-
-    ImVec2 pos = node_rect_min + NODE_WINDOW_PADDING;
-    pos.x = node_rect_min.x + (node->size.x / 2) - (textSize.x / 2);
-
-    ImVec2 node_rect_max = node_rect_min + node->size;
-
-    ImGui::BeginGroup();
-    ImGui::SetCursorScreenPos(pos);
-    ImGui::Text(node->name);
-
-    pos.y += 20;
-
-    DrawNodeFeatures(node, pos, node_rect_min);
-
-    bool node_widgets_active = (!old_any_active && ImGui::IsAnyItemActive());
-
-    draw_list->ChannelsSetCurrent(0); // set to background
-
-    ImGui::SetCursorScreenPos(node_rect_min + ImVec2(NODE_WINDOW_PADDING.x, 0));
-    ImGui::InvisibleButton("node", node->size - ImVec2(NODE_WINDOW_PADDING.x * 2, NODE_WINDOW_PADDING.y));
-
-    if (ImGui::IsItemHovered())
-    {
-        node_hovered_in_scene = node->id;
-        open_context_menu |= ImGui::IsMouseClicked(1);
-
-        if (connection_selected && ImGui::IsMouseReleased(0) && connection_selected.get() != node)
-        {
-            std::vector<Node*>::iterator it = std::find(connection_selected->outputConnections.begin(), connection_selected->outputConnections.end(), node);
-
-            if (it == connection_selected->outputConnections.end())
-            {
-                connection_selected->outputConnections.push_back(node);
-            }
-
-            connection_selected.release();
-        }
-
-        if (open_context_menu)
-        {
-            if (node_hovered_in_scene != -1)
-                node_selected = node_hovered_in_scene;
-        }
-    }
-
-    bool node_moving_active = false;
-
-    if (ImGui::IsItemActive()) // & !s_dragNode.con
-        node_moving_active = true;
-
-    ImU32 node_bg_color = node_hovered_in_scene == node->id ? ImColor(75, 75, 75) : ImColor(60, 60, 60); // changes color on hover
-    draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, 4.0f);
-
-    ImVec2 titleArea = node_rect_max;
-    titleArea.y = node_rect_min.y + 30.0f;
-
-    // Draw text bg area
-    //draw_list->AddRectFilled(node_rect_min + ImVec2(1, 1), titleArea, ImColor(100, 0, 0), 4.0f);
-    draw_list->AddRect(node_rect_min, node_rect_max, ImColor(100, 100, 100), 4.0f, 15, 2);
-
-    ImGui::EndGroup();
-
-    draw_list->ChannelsSetCurrent(1); // set to background
-
-    ImColor color = IM_COL32_WHITE;
-
-    ImVec2 conMin = ImVec2(node_rect_min.x + node->size.x - 3.5f, node_rect_min.y + (node->size.y / 2.5f) - 3.5f);
-    ImVec2 conMax = ImVec2(node_rect_min.x + node->size.x + 3.5f, node_rect_min.y + (node->size.y / 2.5f) + 3.5f);
-
-    if (ImRect((conMin), (conMax)).Contains(mouse))
-    {
-        connectionHovered = true;
-
-        color = IM_COL32_BLACK;
-
-        if (!connection_selected && ImGui::IsMouseDown(0) && !ImGui::IsMouseDragging(0))
-        {
-            connection_selected = std::unique_ptr<Node>(node);
-
-            std::cout << "node" << connection_selected->id << std::endl;
-        }
-        
-        if (connection_selected && ImGui::IsMouseReleased(0) && connection_selected.get() == node)
-        {
-            connection_selected.release();
-        }
-    }
-
-    if(node == connection_selected.get())
-    {
-        color = ImColor(150,150,150);
-    }
-    
-    pos = node_rect_min + node->size;
-    pos.y = node_rect_min.y + (node->size.y / 2.5f);
-
-    draw_list->AddCircleFilled(pos, NODE_SLOT_RADIUS, color);
-
-    if (node_widgets_active || node_moving_active)
-        node_selected = node->id;
-
-    if (node_moving_active && ImGui::IsMouseDragging(0))
-        node->pos = node->pos + ImGui::GetIO().MouseDelta;
-
-    ImGui::PopID();
-
-    draw_list->ChannelsMerge();
-}
-
-void RenderLines(ImDrawList* draw_list, ImVec2 offset)
-{
-    //draw_list->ChannelsSetCurrent(0); // set to background
-
-    for (Node* node : nodes)
-    {
-        for (Node* con : node->outputConnections)
-        {
-            if (con != nullptr)
-            {
-                ImVec2 p1 = (offset + node->pos + ImVec2(node->size.x + 4, node->size.y / 2.5f));
-                ImVec2 p2 = (offset + con->pos + ImVec2(0, 25));
-                DrawHermiteCurve(draw_list, p1, p2, 20);
-            }
-        }
-    }
-
-    if (connection_selected && ImGui::IsMouseDown(0))
-    {
-        ImVec2 mouse = ImGui::GetIO().MousePos;
-
-        DrawHermiteCurve(draw_list, offset + connection_selected->pos + ImVec2(connection_selected->size.x + 4, connection_selected->size.y / 2.5f), mouse, 15);
-    }
-} // TODO - add way to remove lines/connections & fix leftover lines after delete
-
-static Node* CreateNode(int id, const char* name, ImVec2 size, ImVec2 pos = {0,0}, NodeType nodeType = DEFAULT)
+static Node* CreateNode(int id, const char* name, ImVec2 size, ImVec2 pos = { 0,0 }, NodeType nodeType = DEFAULT)
 {
     Node* node;
 
@@ -261,6 +87,183 @@ static Node* CreateNode(int id, const char* name, ImVec2 size, ImVec2 pos = {0,0
 
     return node;
 }
+
+void DrawHermiteCurve(ImDrawList* drawList, ImVec2 p1, ImVec2 p2, int STEPS) // this is the line between two nodes
+{
+    ImVec2 t1 = ImVec2(+80.0f, 0.0f);
+    ImVec2 t2 = ImVec2(+80.0f, 0.0f);
+
+    for (int step = 0; step <= STEPS; step++)
+    {
+        float t = (float)step / (float)STEPS;
+        float h1 = +2 * t * t * t - 3 * t * t + 1.0f;
+        float h2 = -2 * t * t * t + 3 * t * t;
+        float h3 = t * t * t - 2 * t * t + t;
+        float h4 = t * t * t - t * t;
+        drawList->PathLineTo(ImVec2(h1 * p1.x + h2 * p2.x + h3 * t1.x + h4 * t2.x, h1 * p1.y + h2 * p2.y + h3 * t1.y + h4 * t2.y));
+    }
+
+    drawList->PathStroke(ImColor(200, 200, 100), false, 3.0f);
+}
+
+void DrawNodeFeatures(Node* node, ImVec2& pos, ImVec2& node_rect_min)
+{
+    node->DrawNode(node, pos, node_rect_min);
+}
+
+void DrawConnection(ImVec2& node_rect_min, Node*& node, ImVec2& mouse, ImVec2& pos, ImDrawList* draw_list)
+{
+    ImColor connectionColor = IM_COL32_WHITE;
+
+    ImVec2 conMin = ImVec2(node_rect_min.x + node->size.x - 3.5f, node_rect_min.y + (node->size.y / 2.5f) - 3.5f);
+    ImVec2 conMax = ImVec2(node_rect_min.x + node->size.x + 3.5f, node_rect_min.y + (node->size.y / 2.5f) + 3.5f);
+
+    if (ImRect((conMin), (conMax)).Contains(mouse))
+    {
+        connectionHovered = true;
+
+        connectionColor = IM_COL32_BLACK;
+
+        if (!connection_selected && ImGui::IsMouseDown(0) && !ImGui::IsMouseDragging(0))
+        {
+            connection_selected = std::unique_ptr<Node>(node);
+
+            std::cout << "node" << connection_selected->id << std::endl;
+        }
+
+        if (connection_selected && ImGui::IsMouseReleased(0) && connection_selected.get() == node)
+        {
+            connection_selected.release();
+        }
+    }
+
+    if (node == connection_selected.get())
+    {
+        connectionColor = ImColor(150, 150, 150);
+    }
+
+    pos = node_rect_min + node->size;
+    pos.y = node_rect_min.y + (node->size.y / 2.5f);
+
+    draw_list->AddCircleFilled(pos, NODE_SLOT_RADIUS, connectionColor);
+}
+
+void DrawNodeGeneral(Node*& node, ImVec2& offset, ImDrawList* draw_list, int& node_selected)
+{
+    int node_hovered_in_scene = -1;
+    bool open_context_menu = false;
+    bool node_moving_active = false;
+    bool old_any_active = ImGui::IsAnyItemActive();
+    bool node_widgets_active = (!old_any_active && ImGui::IsAnyItemActive());
+
+    ImVec2 mouse = ImGui::GetIO().MousePos;
+
+    ImVec2 node_rect_min = offset + node->pos;
+    ImVec2 textSize = ImGui::CalcTextSize(node->name);
+    ImVec2 pos = node_rect_min + NODE_WINDOW_PADDING;
+    ImVec2 node_rect_max = node_rect_min + node->size;
+
+    // Get id & node start position
+    ImGui::PushID(node->id);
+
+    draw_list->ChannelsSetCurrent(1); // set channel to foreground
+
+    pos.x = node_rect_min.x + (node->size.x / 2) - (textSize.x / 2);
+
+    ImGui::BeginGroup();
+    ImGui::SetCursorScreenPos(pos);
+    ImGui::Text(node->name);
+
+    pos.y += 20;
+
+    DrawNodeFeatures(node, pos, node_rect_min);
+
+    draw_list->ChannelsSetCurrent(0); // set to background
+
+    ImGui::SetCursorScreenPos(node_rect_min + ImVec2(NODE_WINDOW_PADDING.x, 0));
+    ImGui::InvisibleButton("node", node->size - ImVec2(NODE_WINDOW_PADDING.x * 2, NODE_WINDOW_PADDING.y));
+
+    if (ImGui::IsItemHovered())
+    {
+        node_hovered_in_scene = node->id;
+        open_context_menu |= ImGui::IsMouseClicked(1);
+
+        if (connection_selected && ImGui::IsMouseReleased(0) && connection_selected.get() != node)
+        {
+            std::vector<Node*>::iterator it = std::find(connection_selected->outputConnections.begin(), connection_selected->outputConnections.end(), node);
+
+            if (it == connection_selected->outputConnections.end())
+            {
+                connection_selected->outputConnections.push_back(node);
+            }
+
+            connection_selected.release();
+        }
+
+        if (open_context_menu)
+        {
+            if (node_hovered_in_scene != -1)
+                node_selected = node_hovered_in_scene;
+        }
+    }
+
+    if (ImGui::IsItemActive()) // & !s_dragNode.con
+        node_moving_active = true;
+
+    ImU32 node_bg_color = node_hovered_in_scene == node->id ? ImColor(75, 75, 75) : ImColor(60, 60, 60); // changes color on hover
+    draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, 4.0f);
+
+    // Draw text bg area
+    draw_list->AddRect(node_rect_min, node_rect_max, ImColor(100, 100, 100), 4.0f, 15, 2);
+
+    ImGui::EndGroup();
+
+    draw_list->ChannelsSetCurrent(1); // set to background
+
+    DrawConnection(node_rect_min, node, mouse, pos, draw_list);
+
+    if (node_widgets_active || node_moving_active)
+        node_selected = node->id;
+
+    if (node_moving_active && ImGui::IsMouseDragging(0))
+        node->pos = node->pos + ImGui::GetIO().MouseDelta;
+
+    ImGui::PopID();
+}
+
+void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_selected) // Todo - go back add connections and dragging
+{
+    draw_list->ChannelsSplit(2);
+
+    DrawNodeGeneral(node, offset, draw_list, node_selected);
+
+    draw_list->ChannelsMerge();
+}
+
+void RenderLines(ImDrawList* draw_list, ImVec2 offset)
+{
+    //draw_list->ChannelsSetCurrent(0); // set to background
+
+    for (Node* node : nodes)
+    {
+        for (Node* con : node->outputConnections)
+        {
+            if (con != nullptr)
+            {
+                ImVec2 p1 = (offset + node->pos + ImVec2(node->size.x + 4, node->size.y / 2.5f));
+                ImVec2 p2 = (offset + con->pos + ImVec2(0, 25));
+                DrawHermiteCurve(draw_list, p1, p2, 20);
+            }
+        }
+    }
+
+    if (connection_selected && ImGui::IsMouseDown(0))
+    {
+        ImVec2 mouse = ImGui::GetIO().MousePos;
+
+        DrawHermiteCurve(draw_list, offset + connection_selected->pos + ImVec2(connection_selected->size.x + 4, connection_selected->size.y / 2.5f), mouse, 15);
+    }
+} // TODO - add way to remove lines/connections & fix leftover lines after delete
 
 void ShowDemoWindows(bool& show_demo_window, bool& show_another_window, ImVec4& clear_color)
 {
