@@ -56,9 +56,10 @@ public:
 
     DialogueNode()
     {
-        bgColor = ImColor(60, 60, 60);
-        hoverBgColor = ImColor(75, 75, 75);
+        bgColor = ImColor(0, 28, 112);
+        hoverBgColor = ImColor(10, 38, 112);
         borderColor = ImColor(100, 100, 100);
+        textboxColor = ImColor(0, 13, 54);
     }
 
     void DrawNode(Node* node, ImVec2& pos, ImVec2& node_rect_min)
@@ -85,9 +86,10 @@ public:
 
     ChoiceNode()
     {
-        bgColor = ImColor(60, 60, 60);
-        hoverBgColor = ImColor(75, 75, 75);
+        bgColor = ImColor(62, 32, 99);
+        hoverBgColor = ImColor(70, 42, 100);
         borderColor = ImColor(100, 100, 100);
+        textboxColor = ImColor(45, 23, 71);
     }
 
     void DrawNode(Node* node, ImVec2& pos, ImVec2& node_rect_min)
@@ -114,9 +116,10 @@ public:
 
     ConditionNode()
     {
-        bgColor = ImColor(60, 60, 60);
-        hoverBgColor = ImColor(75, 75, 75);
+        bgColor = ImColor(120, 37, 72);
+        hoverBgColor = ImColor(130, 47, 73);
         borderColor = ImColor(100, 100, 100);
+        textboxColor = ImColor(87, 27, 52);
     }
     
     void DrawNode(Node* node, ImVec2& pos, ImVec2& node_rect_min)
@@ -159,9 +162,10 @@ public:
 
     ValueNode()
     {
-        bgColor = ImColor(60, 60, 60);
-        hoverBgColor = ImColor(75, 75, 75);
+        bgColor = ImColor(26, 102, 84);
+        hoverBgColor = ImColor(36, 112, 85);
         borderColor = ImColor(100, 100, 100);
+        textboxColor = ImColor(18, 77, 63);
     }
 
     void DrawNode(Node* node, ImVec2& pos, ImVec2& node_rect_min)
