@@ -59,7 +59,7 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-static Node* CreateNode(int id, const char* name, ImVec2 size, ImVec2 pos = { 0,0 }, NodeType nodeType = DEFAULT)
+static Node* CreateNode(int id, std::string name, ImVec2 size, ImVec2 pos = { 0,0 }, NodeType nodeType = DEFAULT)
 {
     Node* node;
 
@@ -88,7 +88,9 @@ static Node* CreateNode(int id, const char* name, ImVec2 size, ImVec2 pos = { 0,
     node->pos = pos;
     node->type = nodeType;
 
-    ImVec2 titleSize = ImGui::CalcTextSize(node->name);
+    std::cout << "Created Node with the name: " << name << ", " << node->name << std::endl;
+
+    ImVec2 titleSize = ImGui::CalcTextSize(node->name.c_str());
 
     titleSize.y *= 3;
 
@@ -168,7 +170,7 @@ void DrawNodeGeneral(Node*& node, ImVec2& offset, ImDrawList* draw_list, int& no
     ImVec2 mouse = ImGui::GetIO().MousePos;
 
     ImVec2 node_rect_min = offset + node->pos;
-    ImVec2 textSize = ImGui::CalcTextSize(node->name);
+    ImVec2 textSize = ImGui::CalcTextSize(node->name.c_str());
     ImVec2 pos = node_rect_min + NODE_WINDOW_PADDING;
     ImVec2 node_rect_max = node_rect_min + node->size;
 
@@ -181,7 +183,7 @@ void DrawNodeGeneral(Node*& node, ImVec2& offset, ImDrawList* draw_list, int& no
 
     ImGui::BeginGroup();
     ImGui::SetCursorScreenPos(pos);
-    ImGui::Text(node->name);
+    ImGui::Text(node->name.c_str());
 
     pos.y += 20;
 
@@ -319,8 +321,11 @@ void SaveChild(json& nodeJson, int i, Node* currentNode)
 {
     nodeJson[i]["ID"] = currentNode->id;
     nodeJson[i]["Name"] = currentNode->name;
-    //nodeJson[i]["Position"][0] = currentNode->pos.x;
-    //nodeJson[i]["Position"][1] = currentNode->pos.y;
+
+    nodeJson[i]["Position"][0] = currentNode->pos.x;
+    nodeJson[i]["Position"][1] = currentNode->pos.y;
+    nodeJson[i]["Size"][0] = currentNode->size.x;
+    nodeJson[i]["Size"][1] = currentNode->size.y;
 
     nodeJson[i]["Type"] = currentNode->type;
 
@@ -332,7 +337,35 @@ void SaveChild(json& nodeJson, int i, Node* currentNode)
     }
 }
 
-void SaveToJson(std::string filePath)
+void LoadChild(json& nodeJson, int i, Node* parentNode)
+{
+    int nodeID = nodeJson[i]["ID"];
+    std::string nodeName = nodeJson[i]["Name"];
+    float nodePosX = nodeJson[i]["Position"][0];
+    float nodePosY = nodeJson[i]["Position"][1];
+    float nodeSizeX = nodeJson[i]["Size"][0];
+    float nodeSizeY = nodeJson[i]["Size"][1];
+    NodeType nodeType = nodeJson[i]["Type"];
+
+    Node* node = CreateNode(nodeID, nodeName, { nodeSizeX, nodeSizeY }, { nodePosX, nodePosY }, nodeType);
+
+    node->LoadTypeData(nodeJson,i);
+
+    nodeNum = nodeID + 1;
+
+    nodes.push_back(node);
+    parentNode->outputConnections.push_back(node);
+
+    std::cout << nodeID << ", " << nodeName << ", " << nodeType << "Pos:[" << nodePosX << "," << nodePosY << "]" << std::endl;
+
+    for(int j = 0;  j < nodeJson[i]["Children"].size(); ++j)
+    {
+        LoadChild(nodeJson[i]["Children"], j, node);
+    }
+    //nodes.push_back(CreateNode(++nodeNum, "Example Dialogue Node", { 400,110 }, { 250, 80 }, DIALOGUE));
+}
+
+void SaveToJson(std::string _filePath)
 {
     json nodeJson;
 
@@ -345,8 +378,39 @@ void SaveToJson(std::string filePath)
         SaveChild(nodeJson["Root"]["Children"], i, currentNodes[i]);
     }
 
-    std::ofstream file(filePath);
+    std::ofstream file(_filePath);
     file << nodeJson;
+}
+
+void LoadFromJson(std::string _filePath)
+{
+    node_selected = -1;
+    nodeNum = 0;
+    connectionHovered = false;
+    connection_selected.reset();
+
+    for (Node* node : nodes)
+    {
+        delete node;
+    }
+
+    nodes = {};
+
+    json nodeJson;
+
+    std::ifstream file(_filePath);
+    file >> nodeJson;
+
+    //nodeJson["Root"]["Children"];
+
+    Node* rootNode = CreateNode(-1, "Default Node", { 160,50 }, { 25, 40 }, DEFAULT);
+
+    nodes.push_back(rootNode);
+
+    for (int i = 0; i < nodeJson.size(); ++i)
+    {
+        LoadChild(nodeJson["Root"]["Children"], i, rootNode);
+    }
 }
 
 void NewFile()
@@ -371,6 +435,16 @@ void NewFile()
 
 void LoadFile()
 {
+    std::string jsonType = "JSON";
+    std::wstring ws;
+    ws.assign(jsonType.begin(), jsonType.end());
+    LPCWSTR name = ws.c_str();
+
+    COMDLG_FILTERSPEC rgSpec[] =
+    {
+        { name, L"*.json;" },
+    };
+
     //<SnippetRefCounts>
     HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED |
         COINIT_DISABLE_OLE1DDE);
@@ -384,45 +458,70 @@ void LoadFile()
 
         if (SUCCEEDED(hr))
         {
-            // Show the Open dialog box.
-            hr = pFileOpen->Show(NULL);
+            DWORD dwFlags;
 
-            // Get the file name from the dialog box.
+            hr = pFileOpen->GetOptions(&dwFlags);
+
             if (SUCCEEDED(hr))
             {
-                IShellItem* pItem;
-                hr = pFileOpen->GetResult(&pItem);
+                hr = pFileOpen->SetOptions(dwFlags | FOS_STRICTFILETYPES);
+
                 if (SUCCEEDED(hr))
                 {
-                    PWSTR pszFilePath;
-                    hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+                    hr = pFileOpen->SetFileTypes(ARRAYSIZE(rgSpec), rgSpec);
 
-                    // Display the file name to the user.
                     if (SUCCEEDED(hr))
                     {
-                        size_t i;
-                        char str[128];
-                        wcstombs_s(&i,str, pszFilePath, 128);
+                        hr = pFileOpen->SetDefaultExtension(L"json");
 
-                        MessageBox(NULL, pszFilePath, L"File Path", MB_OK);
-                        CoTaskMemFree(pszFilePath);    
+                        if (SUCCEEDED(hr))
+                        {
+                            // Show the Open dialog box.
+                            hr = pFileOpen->Show(NULL);
 
-                        filePath.assign(str);
+                            // Get the file name from the dialog box.
+                            if (SUCCEEDED(hr))
+                            {
+                                IShellItem* pItem;
+                                hr = pFileOpen->GetResult(&pItem);
+                                if (SUCCEEDED(hr))
+                                {
+                                    PWSTR pszFilePath;
+                                    hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+
+                                    // Display the file name to the user.
+                                    if (SUCCEEDED(hr))
+                                    {
+                                        size_t i;
+                                        char str[128];
+                                        wcstombs_s(&i, str, pszFilePath, 128);
+
+                                        MessageBox(NULL, pszFilePath, L"File Path", MB_OK);
+                                        CoTaskMemFree(pszFilePath);
+
+                                        filePath.assign(str);
+                                    }
+                                    pItem->Release();
+                                }
+                            }
+                            pFileOpen->Release();
+                        }
                     }
-                    pItem->Release();
                 }
             }
-            pFileOpen->Release();
         }
+
         CoUninitialize();
     }
 
     std::cout << filePath << std::endl;
+
+    LoadFromJson(filePath);
 }
 
 void SaveFile()
 {
-    std::string jsonType = "BRUH";
+    std::string jsonType = "JSON";
     std::wstring ws;
     ws.assign(jsonType.begin(), jsonType.end());
     LPCWSTR name = ws.c_str();
@@ -445,46 +544,60 @@ void SaveFile()
 
         if (SUCCEEDED(hr))
         {
-            hr = pFileSave->SetFileTypes(ARRAYSIZE(rgSpec), rgSpec);
+            DWORD dwFlags;
+
+            hr = pFileSave->GetOptions(&dwFlags);
+
             if (SUCCEEDED(hr))
             {
-                hr = pFileSave->SetDefaultExtension(L"json");
+                hr = pFileSave->SetOptions(dwFlags | FOS_STRICTFILETYPES);
 
                 if (SUCCEEDED(hr))
                 {
-                    // Show the Open dialog box.
-                    hr = pFileSave->Show(NULL);
+                    hr = pFileSave->SetFileTypes(ARRAYSIZE(rgSpec), rgSpec);
 
-                    // Get the file name from the dialog box.
                     if (SUCCEEDED(hr))
                     {
-                        IShellItem* pItem;
-                        hr = pFileSave->GetResult(&pItem);
+                        hr = pFileSave->SetDefaultExtension(L"json");
+
                         if (SUCCEEDED(hr))
                         {
-                            PWSTR pszFilePath;
-                            hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+                            // Show the Open dialog box.
+                            hr = pFileSave->Show(NULL);
 
-                            // Display the file name to the user.
+                            // Get the file name from the dialog box.
                             if (SUCCEEDED(hr))
                             {
-                                size_t i;
-                                char str[128];
-                                wcstombs_s(&i, str, pszFilePath, 128);
+                                IShellItem* pItem;
+                                hr = pFileSave->GetResult(&pItem);
+                                if (SUCCEEDED(hr))
+                                {
+                                    PWSTR pszFilePath;
+                                    hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
 
-                                MessageBox(NULL, pszFilePath, L"File Path", MB_OK);
-                                CoTaskMemFree(pszFilePath);
+                                    // Display the file name to the user.
+                                    if (SUCCEEDED(hr))
+                                    {
+                                        size_t i;
+                                        char str[128];
+                                        wcstombs_s(&i, str, pszFilePath, 128);
 
-                                filePath.assign(str);
+                                        MessageBox(NULL, pszFilePath, L"File Path", MB_OK);
+                                        CoTaskMemFree(pszFilePath);
+
+                                        filePath.assign(str);
+                                    }
+                                    pItem->Release();
+                                }
                             }
-                            pItem->Release();
+                            pFileSave->Release();
                         }
-                    }
-                    pFileSave->Release();
-                }
 
+                    }
+                }
             }
         }
+
         CoUninitialize();
     }
 
@@ -619,7 +732,7 @@ void NodeListRender(const ImGuiWindowFlags& window_flags, int& node_hovered_in_l
 
         ImGui::PushID(node->id);
 
-        if (ImGui::Selectable(node->name, node->id == node_selected))
+        if (ImGui::Selectable(node->name.c_str(), node->id == node_selected))
             node_selected = node->id;
         if (ImGui::IsItemHovered())
         {

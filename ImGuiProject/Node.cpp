@@ -22,7 +22,7 @@ class Node
 public:
 
     int id = -1;
-    const char* name = "noName";
+    std::string name = "noName";
 
     ImVec2 pos;
     ImVec2 size;
@@ -50,6 +50,11 @@ public:
     }
 
     virtual void SaveTypeData(nlohmann::json& nodeJson, int i)
+    {
+
+    }
+
+    virtual void LoadTypeData(nlohmann::json& nodeJson, int i)
     {
 
     }
@@ -88,6 +93,16 @@ public:
     void SaveTypeData(nlohmann::json& nodeJson, int i)
     {
         nodeJson[i]["Dialogue"] = dialogueLine;
+    }
+
+    void LoadTypeData(nlohmann::json& nodeJson, int i)
+    {
+        std::string str = nodeJson[i]["Dialogue"];
+
+        for(int j = 0; j < str.size(); ++j)
+        {
+            dialogueLine[j] = str[j];
+        }
     }
 };
 
