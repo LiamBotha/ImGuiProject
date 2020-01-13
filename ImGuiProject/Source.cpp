@@ -48,10 +48,12 @@ static bool show_grid = true;
 static int nodeNum = 0;
 
 bool connectionHovered = false;
+bool resizeHovered = false;
 
 static std::string filePath;
 
 std::unique_ptr<Node> connection_selected;
+std::unique_ptr<Node> resize_selected;
 
 static std::vector<Node*> nodes = {};
 
@@ -160,6 +162,41 @@ void DrawConnection(ImVec2& node_rect_min, Node*& node, ImVec2& mouse, ImVec2& p
     draw_list->AddCircleFilled(pos, NODE_SLOT_RADIUS, connectionColor);
 }
 
+void ResizeNode(ImVec2& node_rect_min, Node*& node, ImVec2& mouse, ImVec2& pos, ImDrawList* draw_list)
+{
+    pos.x = node_rect_min.x + (node->size.x - NODE_SLOT_RADIUS);
+    pos.y = node_rect_min.y + (node->size.y - NODE_SLOT_RADIUS);
+
+    ImColor connectionColor = IM_COL32_WHITE;
+    
+    ImVec2 p1 = pos + ImVec2(-NODE_SLOT_RADIUS * 2, NODE_SLOT_RADIUS);
+    ImVec2 p2 = pos + ImVec2(NODE_SLOT_RADIUS, -NODE_SLOT_RADIUS * 2);
+    ImVec2 p3 = pos + ImVec2(NODE_SLOT_RADIUS, NODE_SLOT_RADIUS);
+
+    if (ImTriangleContainsPoint(p1, p2, p3, mouse))
+    {
+        resizeHovered = true;
+        connectionColor = IM_COL32_BLACK;
+
+        if (!resize_selected && ImGui::IsMouseDown(0) && !ImGui::IsMouseDragging(0))
+        {
+            resize_selected = std::unique_ptr<Node>(node);
+        }
+    }
+
+    if (resize_selected && ImGui::IsMouseReleased(0))
+    {
+        resize_selected.release();
+    }
+    else if (resize_selected.get() == node && !ImGui::IsMouseReleased(0))
+    {
+        resize_selected->size = (resize_selected->size + ImVec2(ImGui::GetIO().MouseDelta.x ,ImGui::GetIO().MouseDelta.y));
+        connectionColor = ImColor(150, 150, 150);
+    }
+
+    draw_list->AddTriangleFilled(pos + ImVec2(-10, NODE_SLOT_RADIUS), pos + ImVec2(5, -10), pos + ImVec2(NODE_SLOT_RADIUS, NODE_SLOT_RADIUS), connectionColor);
+}
+
 void DrawNodeGeneral(Node*& node, ImVec2& offset, ImDrawList* draw_list, int& node_selected)
 {
     int node_hovered_in_scene = -1;
@@ -233,6 +270,7 @@ void DrawNodeGeneral(Node*& node, ImVec2& offset, ImDrawList* draw_list, int& no
     draw_list->ChannelsSetCurrent(1); // set to background
 
     DrawConnection(node_rect_min, node, mouse, pos, draw_list);
+    ResizeNode(node_rect_min, node, mouse, pos, draw_list);
 
     if (node_widgets_active || node_moving_active)
         node_selected = node->id;
