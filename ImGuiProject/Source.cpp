@@ -120,11 +120,13 @@ void DrawHermiteCurve(ImDrawList* drawList, ImVec2 p1, ImVec2 p2, int STEPS) // 
     drawList->PathStroke(ImColor(200, 200, 100), false, 3.0f);
 }
 
+//Calls each node draw function to get its unique elements
 void DrawNodeFeatures(Node* node, ImVec2& pos, ImVec2& node_rect_min)
 {
     node->DrawNode(node, pos, node_rect_min);
 }
 
+//Draws the connection point and handles its behaviour
 void DrawConnection(ImVec2& node_rect_min, Node*& node, ImVec2& mouse, ImVec2& pos, ImDrawList* draw_list)
 {
     ImColor connectionColor = IM_COL32_WHITE;
@@ -162,6 +164,7 @@ void DrawConnection(ImVec2& node_rect_min, Node*& node, ImVec2& mouse, ImVec2& p
     draw_list->AddCircleFilled(pos, NODE_SLOT_RADIUS, connectionColor);
 }
 
+//Handles node resizing each frame
 void ResizeNode(ImVec2& node_rect_min, Node*& node, ImVec2& mouse, ImVec2& pos, ImDrawList* draw_list)
 {
     pos.x = node_rect_min.x + (node->size.x - NODE_SLOT_RADIUS);
@@ -213,6 +216,7 @@ void ResizeNode(ImVec2& node_rect_min, Node*& node, ImVec2& mouse, ImVec2& pos, 
     draw_list->AddTriangleFilled(pos + ImVec2(-10, NODE_SLOT_RADIUS), pos + ImVec2(5, -10), pos + ImVec2(NODE_SLOT_RADIUS, NODE_SLOT_RADIUS), connectionColor);
 }
 
+//Draws the generic aspects of the nodes
 void DrawNodeGeneral(Node*& node, ImVec2& offset, ImDrawList* draw_list, int& node_selected)
 {
     int node_hovered_in_scene = -1;
@@ -306,6 +310,7 @@ void DrawNode(ImDrawList* draw_list, Node* node, ImVec2 offset, int& node_select
     draw_list->ChannelsMerge();
 }
 
+//Draws the lines connecting each node and its connections
 void RenderLines(ImDrawList* draw_list, ImVec2 offset)
 {
     //draw_list->ChannelsSetCurrent(0); // set to background
@@ -372,6 +377,7 @@ void ShowDemoWindows(bool& show_demo_window, bool& show_another_window, ImVec4& 
     }
 }
 
+//Converts each json child back into a node
 void SaveChild(json& nodeJson, int i, Node* currentNode)
 {
     nodeJson[i]["ID"] = currentNode->id;
@@ -392,6 +398,7 @@ void SaveChild(json& nodeJson, int i, Node* currentNode)
     }
 }
 
+//Converts each node into json 
 void LoadChild(json& nodeJson, int i, Node* parentNode)
 {
     int nodeID = nodeJson[i]["ID"];
@@ -690,6 +697,7 @@ void SaveFile()
     }
 }
 
+//Hnadles the visuals of the menu and handles the menu item's actions
 void DrawContextMenues(ImVec2& scrolling)
 {
     // Draw context menu
@@ -765,6 +773,7 @@ void DrawContextMenues(ImVec2& scrolling)
     ImGui::PopStyleVar();
 }
 
+//Opens the context menu when the player right clicks
 void OpenContextMenu(int& node_hovered_in_list, int& node_hovered_in_scene, bool& open_context_menu, bool& open_node_menu)
 {
     // Open context menu
@@ -788,6 +797,7 @@ void OpenContextMenu(int& node_hovered_in_list, int& node_hovered_in_scene, bool
     }
 }
 
+// Draws the background grid
 void DrawGrid(ImVec2& scrolling, ImDrawList* draw_list)
 {
     if (true) // draws grid into window
@@ -803,6 +813,7 @@ void DrawGrid(ImVec2& scrolling, ImDrawList* draw_list)
     }
 }
 
+// Draws a list of all the nodes on the left
 void NodeListRender(const ImGuiWindowFlags& window_flags, int& node_hovered_in_list, bool& open_context_menu)
 {
     ImGui::SetNextWindowBgAlpha(0.5f);
