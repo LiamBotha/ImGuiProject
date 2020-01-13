@@ -138,6 +138,16 @@ public:
     {
         nodeJson[i]["Choice"] = choiceLine;
     }
+
+    void LoadTypeData(nlohmann::json& nodeJson, int i)
+    {
+        std::string str = nodeJson[i]["Choice"];
+
+        for (int j = 0; j < str.size(); ++j)
+        {
+            choiceLine[j] = str[j];
+        }
+    }
 };
 
 class ConditionNode : public Node
@@ -190,6 +200,22 @@ public:
         nodeJson[i]["Condition Variable"] = playerInput;
         nodeJson[i]["Condition Value"] = conditionValue;
     }
+
+    void LoadTypeData(nlohmann::json& nodeJson, int i)
+    {
+        std::string str = nodeJson[i]["Condition Variable"];
+        std::string str2 = nodeJson[i]["Condition Value"];
+
+        for (int j = 0; j < str.size(); ++j)
+        {
+            playerInput[j] = str[j];
+        }
+
+        for (int j = 0; j < str2.size(); ++j)
+        {
+            conditionValue[j] = str2[j];
+        }
+    }
 };
 
 class ValueNode : public Node
@@ -241,6 +267,22 @@ public:
     {
         nodeJson[i]["Condition Variable"] = playerInput;
         nodeJson[i]["Condition Value"] = conditionValue;
+    }
+
+    void LoadTypeData(nlohmann::json& nodeJson, int i)
+    {
+        std::string str = nodeJson[i]["Condition Variable"];
+        std::string str2 = nodeJson[i]["Condition Value"];
+
+        for (int j = 0; j < str.size(); ++j)
+        {
+            playerInput[j] = str[j];
+        }
+
+        for (int j = 0; j < str2.size(); ++j)
+        {
+            conditionValue[j] = str2[j];
+        }
     }
 };
 

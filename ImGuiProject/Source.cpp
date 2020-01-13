@@ -29,6 +29,7 @@ using json = nlohmann::json;
 
 #include <windows.h>
 #include <shobjidl.h> 
+#include <shlobj.h>
 
 #include "node.cpp"
 #include "Source.h"
@@ -262,7 +263,7 @@ void RenderLines(ImDrawList* draw_list, ImVec2 offset)
             if (con != nullptr)
             {
                 ImVec2 p1 = (offset + node->pos + ImVec2(node->size.x + 4, node->size.y / 2.5f));
-                ImVec2 p2 = (offset + con->pos + ImVec2(0, 25));
+                ImVec2 p2 = (offset + con->pos + ImVec2(0, con->size.y / 2));
                 DrawHermiteCurve(draw_list, p1, p2, 20);
             }
         }
@@ -351,18 +352,32 @@ void LoadChild(json& nodeJson, int i, Node* parentNode)
 
     node->LoadTypeData(nodeJson,i);
 
-    nodeNum = nodeID + 1;
-
-    nodes.push_back(node);
-    parentNode->outputConnections.push_back(node);
-
-    std::cout << nodeID << ", " << nodeName << ", " << nodeType << "Pos:[" << nodePosX << "," << nodePosY << "]" << std::endl;
-
-    for(int j = 0;  j < nodeJson[i]["Children"].size(); ++j)
+    bool exists = false;
+    for (int n = 0; n < nodes.size(); ++n)
     {
-        LoadChild(nodeJson[i]["Children"], j, node);
+        if (node->id == nodes[n]->id)
+        {
+            exists = true;
+            std::cout << "already exists" << std::endl;
+            parentNode->outputConnections.push_back(nodes[n]);
+        }
     }
-    //nodes.push_back(CreateNode(++nodeNum, "Example Dialogue Node", { 400,110 }, { 250, 80 }, DIALOGUE));
+
+    if (!exists)
+    {
+        if (nodeNum < nodeID)
+            nodeNum = nodeID + 1;
+
+        nodes.push_back(node);
+        parentNode->outputConnections.push_back(node);
+
+        std::cout << nodeID << ", " << nodeName << ", " << nodeType << "Pos:[" << nodePosX << "," << nodePosY << "]" << std::endl;
+
+        for (int j = 0; j < nodeJson[i]["Children"].size(); ++j)
+        {
+            LoadChild(nodeJson[i]["Children"], j, node);
+        }
+    }
 }
 
 void SaveToJson(std::string _filePath)
@@ -403,7 +418,7 @@ void LoadFromJson(std::string _filePath)
 
     //nodeJson["Root"]["Children"];
 
-    Node* rootNode = CreateNode(-1, "Default Node", { 160,50 }, { 25, 40 }, DEFAULT);
+    Node* rootNode = CreateNode(-1, "Default Node", { 160,50 }, { 25, 40 }, DEFAULT); //todo check if node already exist and don't create again if so
 
     nodes.push_back(rootNode);
 
@@ -419,6 +434,7 @@ void NewFile()
     nodeNum = 0;
     connectionHovered = false;
     connection_selected.reset();
+    filePath = "";
 
     for (Node* node : nodes)
     {
@@ -476,35 +492,48 @@ void LoadFile()
 
                         if (SUCCEEDED(hr))
                         {
-                            // Show the Open dialog box.
-                            hr = pFileOpen->Show(NULL);
+                            PCWSTR folderpath = TEXT("C:\\Users\\User\\source\\repos\\ImGuiProject\\ImGuiProject\\Export");
 
-                            // Get the file name from the dialog box.
+                            IShellItem* psi = NULL;
+                            hr = SHCreateItemFromParsingName(folderpath,NULL,IID_PPV_ARGS(&psi));
                             if (SUCCEEDED(hr))
                             {
-                                IShellItem* pItem;
-                                hr = pFileOpen->GetResult(&pItem);
+                                hr = pFileOpen->SetDefaultFolder(psi);
                                 if (SUCCEEDED(hr))
                                 {
-                                    PWSTR pszFilePath;
-                                    hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+                                    // Show the Open dialog box.
+                                    hr = pFileOpen->Show(NULL);
 
-                                    // Display the file name to the user.
+                                    // Get the file name from the dialog box.
                                     if (SUCCEEDED(hr))
                                     {
-                                        size_t i;
-                                        char str[128];
-                                        wcstombs_s(&i, str, pszFilePath, 128);
+                                        IShellItem* pItem;
+                                        hr = pFileOpen->GetResult(&pItem);
+                                        if (SUCCEEDED(hr))
+                                        {
+                                            PWSTR pszFilePath;
+                                            hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
 
-                                        MessageBox(NULL, pszFilePath, L"File Path", MB_OK);
-                                        CoTaskMemFree(pszFilePath);
+                                            // Display the file name to the user.
+                                            if (SUCCEEDED(hr))
+                                            {
+                                                size_t i;
+                                                char str[128];
+                                                wcstombs_s(&i, str, pszFilePath, 128);
 
-                                        filePath.assign(str);
+                                                MessageBox(NULL, pszFilePath, L"File Path", MB_OK);
+                                                CoTaskMemFree(pszFilePath);
+
+                                                filePath.assign(str);
+
+                                                LoadFromJson(filePath);
+                                            }
+                                            pItem->Release();
+                                        }
                                     }
-                                    pItem->Release();
+                                    pFileOpen->Release();
                                 }
                             }
-                            pFileOpen->Release();
                         }
                     }
                 }
@@ -513,10 +542,6 @@ void LoadFile()
 
         CoUninitialize();
     }
-
-    std::cout << filePath << std::endl;
-
-    LoadFromJson(filePath);
 }
 
 void SaveFile()
@@ -560,39 +585,48 @@ void SaveFile()
                     {
                         hr = pFileSave->SetDefaultExtension(L"json");
 
+                        PCWSTR folderpath = TEXT("C:\\Users\\User\\source\\repos\\ImGuiProject\\ImGuiProject\\Export");
+
+                        IShellItem* psi = NULL;
+                        hr = SHCreateItemFromParsingName(folderpath, NULL, IID_PPV_ARGS(&psi));
                         if (SUCCEEDED(hr))
                         {
-                            // Show the Open dialog box.
-                            hr = pFileSave->Show(NULL);
-
-                            // Get the file name from the dialog box.
+                            hr = pFileSave->SetDefaultFolder(psi);
                             if (SUCCEEDED(hr))
                             {
-                                IShellItem* pItem;
-                                hr = pFileSave->GetResult(&pItem);
+                                // Show the Open dialog box.
+                                hr = pFileSave->Show(NULL);
+
+                                // Get the file name from the dialog box.
                                 if (SUCCEEDED(hr))
                                 {
-                                    PWSTR pszFilePath;
-                                    hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-
-                                    // Display the file name to the user.
+                                    IShellItem* pItem;
+                                    hr = pFileSave->GetResult(&pItem);
                                     if (SUCCEEDED(hr))
                                     {
-                                        size_t i;
-                                        char str[128];
-                                        wcstombs_s(&i, str, pszFilePath, 128);
+                                        PWSTR pszFilePath;
+                                        hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
 
-                                        MessageBox(NULL, pszFilePath, L"File Path", MB_OK);
-                                        CoTaskMemFree(pszFilePath);
+                                        // Display the file name to the user.
+                                        if (SUCCEEDED(hr))
+                                        {
+                                            size_t i;
+                                            char str[128];
+                                            wcstombs_s(&i, str, pszFilePath, 128);
 
-                                        filePath.assign(str);
+                                            MessageBox(NULL, pszFilePath, L"File Path", MB_OK);
+                                            CoTaskMemFree(pszFilePath);
+
+                                            filePath.assign(str);
+
+                                            SaveToJson(filePath);
+                                        }
+                                        pItem->Release();
                                     }
-                                    pItem->Release();
                                 }
+                                pFileSave->Release();
                             }
-                            pFileSave->Release();
                         }
-
                     }
                 }
             }
@@ -600,10 +634,6 @@ void SaveFile()
 
         CoUninitialize();
     }
-
-    std::cout << filePath.c_str() << std::endl;
-
-    SaveToJson(filePath);
 }
 
 void DrawContextMenues(ImVec2& scrolling)
@@ -618,7 +648,7 @@ void DrawContextMenues(ImVec2& scrolling)
             mousePos.x -= 325;
             mousePos.y -= 100;
 
-            nodes.push_back(CreateNode(++nodeNum, "Dialogue Node", { 395,105 }, mousePos, DIALOGUE));
+            nodes.push_back(CreateNode(++nodeNum, "Dialogue Node", { 400,110 }, mousePos, DIALOGUE));
         }
         else if (ImGui::MenuItem("Add Choice Node"))
         {
