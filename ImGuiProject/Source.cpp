@@ -167,7 +167,7 @@ void ResizeNode(ImVec2& node_rect_min, Node*& node, ImVec2& mouse, ImVec2& pos, 
     pos.x = node_rect_min.x + (node->size.x - NODE_SLOT_RADIUS);
     pos.y = node_rect_min.y + (node->size.y - NODE_SLOT_RADIUS);
 
-    ImColor connectionColor = IM_COL32_WHITE;
+    ImColor connectionColor = ImColor(150, 150, 150,150);
     
     ImVec2 p1 = pos + ImVec2(-NODE_SLOT_RADIUS * 2, NODE_SLOT_RADIUS);
     ImVec2 p2 = pos + ImVec2(NODE_SLOT_RADIUS, -NODE_SLOT_RADIUS * 2);
@@ -183,6 +183,7 @@ void ResizeNode(ImVec2& node_rect_min, Node*& node, ImVec2& mouse, ImVec2& pos, 
             resize_selected = std::unique_ptr<Node>(node);
         }
     }
+    else resizeHovered = false;
 
     if (resize_selected && ImGui::IsMouseReleased(0))
     {
@@ -190,7 +191,22 @@ void ResizeNode(ImVec2& node_rect_min, Node*& node, ImVec2& mouse, ImVec2& pos, 
     }
     else if (resize_selected.get() == node && !ImGui::IsMouseReleased(0))
     {
-        resize_selected->size = (resize_selected->size + ImVec2(ImGui::GetIO().MouseDelta.x ,ImGui::GetIO().MouseDelta.y));
+        float newX = std::fmax(125,mouse.x - node_rect_min.x);
+        float newY = std::fmax(50,mouse.y - node_rect_min.y);
+
+        ImVec2 mouseDelta = ImGui::GetIO().MouseDelta;
+
+        //if(resize_selected->size.x < 50)
+        //{
+        //    newX = mouse.x - node_rect_min.x;
+        //}
+            
+        //if(resize_selected->size.y < 50)
+        //{
+        //    newY = mouse.y - node_rect_min.y;
+        //}
+
+        resize_selected->size = ImVec2(newX,newY);
         connectionColor = ImColor(150, 150, 150);
     }
 
