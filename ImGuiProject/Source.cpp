@@ -30,6 +30,7 @@ using json = nlohmann::json;
 #include <windows.h>
 #include <shobjidl.h> 
 #include <shlobj.h>
+#include <filesystem>
 
 #include "node.cpp"
 #include "Source.h"
@@ -51,6 +52,7 @@ bool connectionHovered = false;
 bool resizeHovered = false;
 
 static std::string filePath;
+std::string relativePath;
 
 std::unique_ptr<Node> connection_selected;
 std::unique_ptr<Node> resize_selected;
@@ -553,7 +555,9 @@ void LoadFile()
 
                         if (SUCCEEDED(hr))
                         {
-                            PCWSTR folderpath = TEXT("C:\\Users\\User\\source\\repos\\ImGuiProject\\ImGuiProject\\Export");
+                            std::wstring stemp = std::wstring(relativePath.begin(), relativePath.end());
+
+                            PCWSTR folderpath = stemp.c_str();
 
                             IShellItem* psi = NULL;
                             hr = SHCreateItemFromParsingName(folderpath,NULL,IID_PPV_ARGS(&psi));
@@ -646,7 +650,9 @@ void SaveFile()
                     {
                         hr = pFileSave->SetDefaultExtension(L"json");
 
-                        PCWSTR folderpath = TEXT("C:\\Users\\User\\source\\repos\\ImGuiProject\\ImGuiProject\\Export");
+                        std::wstring stemp = std::wstring(relativePath.begin(), relativePath.end());
+
+                        PCWSTR folderpath = stemp.c_str();
 
                         IShellItem* psi = NULL;
                         hr = SHCreateItemFromParsingName(folderpath, NULL, IID_PPV_ARGS(&psi));
@@ -956,6 +962,24 @@ int main()
     bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+    char rootFilePath[MAX_PATH];
+
+    GetModuleFileNameA(NULL, rootFilePath, MAX_PATH);
+
+    relativePath = rootFilePath;
+
+    size_t pos = relativePath.find("ImGuiProject.exe");
+
+    if (pos != std::string::npos)
+    {
+        // If found then erase it from string
+        relativePath.erase(pos, 17);
+    }
+
+    //relativePath += "Json";
+
+    std::cout << relativePath <<  std::endl;
 
     while (!glfwWindowShouldClose(window))
     {
