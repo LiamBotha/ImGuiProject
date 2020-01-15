@@ -40,7 +40,7 @@ public:
     {
         bgColor = ImColor(60, 60, 60);
         hoverBgColor = ImColor(75, 75, 75);
-        borderColor = ImColor(100, 100, 100);
+        borderColor = ImColor(10, 10, 10);
         textboxColor = ImColor(80, 80, 80);
     }
 
@@ -69,8 +69,7 @@ public:
     DialogueNode()
     {
         bgColor = ImColor(0, 28, 112);
-        hoverBgColor = ImColor(10, 38, 112);
-        borderColor = ImColor(100, 100, 100);
+        hoverBgColor = ImColor(15, 40, 120);
         textboxColor = ImColor(0, 13, 54);
     }
 
@@ -115,7 +114,6 @@ public:
     {
         bgColor = ImColor(62, 32, 99);
         hoverBgColor = ImColor(70, 42, 100);
-        borderColor = ImColor(100, 100, 100);
         textboxColor = ImColor(45, 23, 71);
     }
 
@@ -160,7 +158,6 @@ public:
     {
         bgColor = ImColor(120, 37, 72);
         hoverBgColor = ImColor(130, 47, 73);
-        borderColor = ImColor(100, 100, 100);
         textboxColor = ImColor(87, 27, 52);
     }
     
@@ -228,7 +225,6 @@ public:
     {
         bgColor = ImColor(26, 102, 84);
         hoverBgColor = ImColor(36, 112, 85);
-        borderColor = ImColor(100, 100, 100);
         textboxColor = ImColor(18, 77, 63);
     }
 

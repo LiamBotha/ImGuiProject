@@ -281,7 +281,7 @@ void DrawNodeGeneral(Node*& node, ImVec2& offset, ImDrawList* draw_list, int& no
     if (ImGui::IsItemActive()) // & !s_dragNode.con
         node_moving_active = true;
 
-    ImU32 node_bg_color = node_hovered_in_scene == node->id ? node->hoverBgColor : node->bgColor; // changes color on hover
+    ImU32 node_bg_color = node_selected == node->id || node_hovered_in_scene == node->id ? node->hoverBgColor : node->bgColor; // changes color on hover
     draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, 4.0f);
 
     // Draw text bg area
@@ -867,11 +867,6 @@ void HandleNodes()
     ImGui::SetCursorPos({ 170,55 });
     ImGui::BeginGroup();
 
-    // Create our child canvas
-    //ImGui::Text("Hold middle mouse button to scroll (%.2f,%.2f)", scrolling.x, scrolling.y);
-    //ImGui::SameLine(ImGui::GetWindowWidth() - 100);
-    //ImGui::Checkbox("Show grid", &show_grid);
-
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, IM_COL32(60, 60, 70, 200));
@@ -894,6 +889,14 @@ void HandleNodes()
     if (connectionHovered == false && ImGui::IsMouseReleased(0))
     {
         connection_selected.release();
+    }
+
+    if (node_selected && ImGui::IsMouseClicked(0))
+    {
+        if (!ImGui::IsItemHovered())
+        {
+            node_selected = -1;
+        }
     }
 
     OpenContextMenu(node_hovered_in_list, node_hovered_in_scene, open_context_menu, open_node_menu);
@@ -977,7 +980,7 @@ int main()
         relativePath.erase(pos, 17);
     }
 
-    //relativePath += "Json";
+    relativePath += "Json";
 
     std::cout << relativePath <<  std::endl;
 
@@ -992,7 +995,7 @@ int main()
 
         if (nodes.size() == 0)
         {
-            nodes.push_back(CreateNode(-1, "Default Node", { 160,50 }, { 25, 40 }, DEFAULT));
+            nodes.push_back(CreateNode(0, "Default Node", { 160,50 }, { 25, 40 }, DEFAULT));
             nodes.push_back(CreateNode(++nodeNum, "Example Dialogue Node", { 400,110 }, { 250, 80 }, DIALOGUE));
 
             nodes[0]->outputConnections.push_back(nodes[1]);
