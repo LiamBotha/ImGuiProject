@@ -753,31 +753,19 @@ void DrawContextMenu(ImVec2& scrolling)
     {
         if (ImGui::MenuItem("Delete Node"))
         {
+            struct HasId
+            {
+                bool operator()(const Node* n)
+                {
+                    return node_selected.find(n->id) != node_selected.end();
+                }
+            };
+
+            nodes.erase(std::remove_if(nodes.begin(), nodes.end(), HasId()), nodes.end());
+
             for (int i = 0; i < nodes.size(); ++i)
             {
-                bool isSelected = false;
-                auto search = node_selected.find(nodes[i]->id);
-                if (search != node_selected.end())
-                    isSelected = true;
-
-                if (isSelected)
-                {
-                    nodes.erase(nodes.begin() + i);
-                    continue;
-                }
-
-                for (int j = 0; j < nodes[i]->outputConnections.size(); ++j)
-                {
-                    isSelected = false;
-                    auto search = node_selected.find(nodes[i]->outputConnections[j]->id);
-                    if (search != node_selected.end())
-                        isSelected = true;
-
-                    if (isSelected)
-                    {
-                        nodes[i]->outputConnections.erase(nodes[i]->outputConnections.begin() + j);
-                    }
-                }
+                nodes[i]->outputConnections.erase(std::remove_if(nodes[i]->outputConnections.begin(), nodes[i]->outputConnections.end(), HasId()), nodes[i]->outputConnections.end());
             }
         }
         ImGui::EndPopup();
@@ -908,7 +896,7 @@ void HandleNodes()
     {
         node_selected.clear();
     }
-    else if (!isSelectionBox && ImGui::IsMouseDown(0) && !ImGui::IsAnyItemHovered())
+    else if (!isSelectionBox && !connection_selected && !resize_selected && ImGui::IsMouseDown(0) && !ImGui::IsAnyItemHovered())
     {
         isSelectionBox = true;
         selectionStartPos = mouse;
@@ -918,8 +906,8 @@ void HandleNodes()
     if (isSelectionBox && ImGui::IsMouseDragging(0))
     {
         selectionEndPos = mouse;
-        draw_list->AddRect(selectionStartPos, selectionEndPos, ImColor(100, 100, 255,125),0,15,2);
-        draw_list->AddRectFilled(selectionStartPos, selectionEndPos, ImColor(50, 50, 255,25));
+        draw_list->AddRect(selectionStartPos, selectionEndPos, ImColor(20, 20, 255,150),0,15,3);
+        draw_list->AddRectFilled(selectionStartPos, selectionEndPos, ImColor(50, 50, 255,20));
     }
     else if (isSelectionBox && ImGui::IsMouseReleased(0))
     {
