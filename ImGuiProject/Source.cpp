@@ -26,6 +26,7 @@ using json = nlohmann::json;
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <set>
 
 #include <windows.h>
 #include <shobjidl.h> 
@@ -45,7 +46,7 @@ const ImVec2 NODE_WINDOW_PADDING(8.0f, 8.0f);
 
 ImVec2 scrolling = ImVec2(0.0f, 0.0f);
 
-static int node_selected = -1;
+static std::set<int> node_selected = {};
 static int nodeNum = 0;
 
 bool show_grid = true;
@@ -212,6 +213,7 @@ void DrawNodeGeneral(Node*& node, ImVec2& offset, ImDrawList* draw_list)
     int node_hovered_in_scene = -1;
     bool open_node_menu = false;
     bool node_moving_active = false;
+    bool isSelected = false;
 
     ImVec2 mouse = ImGui::GetIO().MousePos;
 
@@ -258,14 +260,18 @@ void DrawNodeGeneral(Node*& node, ImVec2& offset, ImDrawList* draw_list)
         if (open_node_menu)
         {
             if (node_hovered_in_scene != -1)
-                node_selected = node_hovered_in_scene; // selects node to open context menu for
+                node_selected.insert(node_hovered_in_scene);// selects node to open context menu for
         }
     }
 
     if (ImGui::IsItemActive())
         node_moving_active = true;
 
-    ImU32 node_bg_color = node_selected == node->id || node_hovered_in_scene == node->id ? node->hoverBgColor : node->bgColor; // changes color on hover
+    auto search = node_selected.find(node->id);
+    if (search != node_selected.end())
+        isSelected = true;
+
+    ImU32 node_bg_color = isSelected || node_hovered_in_scene == node->id ? node->hoverBgColor : node->bgColor; // changes color on hover
     draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, 3.5f);
     draw_list->AddRect(node_rect_min, node_rect_max, node->borderColor, 3.5f, 15, 2);
 
@@ -276,10 +282,15 @@ void DrawNodeGeneral(Node*& node, ImVec2& offset, ImDrawList* draw_list)
     DrawConnection(node_rect_min, node, mouse, pos, draw_list);
     ResizeNode(node_rect_min, node, mouse, pos, draw_list);
 
-    if (node_moving_active)
-        node_selected = node->id;
+    if (node_moving_active && !ImGui::GetIO().KeyCtrl) // checks if grabbing node
+    {
+        node_selected.clear();
+        node_selected.insert(node->id);
+    }
+    else if(node_moving_active && ImGui::GetIO().KeyCtrl)
+        node_selected.insert(node->id);
 
-    if (node_moving_active && ImGui::IsMouseDragging(0))
+    if (isSelected && ImGui::IsMouseDragging(0))
         node->pos = node->pos + ImGui::GetIO().MouseDelta;
 
     ImGui::PopID();
@@ -442,7 +453,7 @@ void SaveToJson(std::string _filePath)
 
 void LoadFromJson(std::string _filePath)
 {
-    node_selected = -1;
+    node_selected.clear();
     nodeNum = 0;
     connectionHovered = false;
     connection_selected.reset();
@@ -473,7 +484,7 @@ void LoadFromJson(std::string _filePath)
 
 void NewFile()
 {
-    node_selected = -1;
+    node_selected.clear();
     nodeNum = 0;
     connectionHovered = false;
     connection_selected.reset();
@@ -739,7 +750,12 @@ void DrawContextMenu(ImVec2& scrolling)
         {
             for (int i = 0; i < nodes.size(); ++i)
             {
-                if (nodes[i]->id == node_selected)
+                bool isSelected = false;
+                auto search = node_selected.find(nodes[i]->id);
+                if (search != node_selected.end())
+                    isSelected = true;
+
+                if (isSelected)
                 {
                     nodes.erase(nodes.begin() + i);
                     continue;
@@ -747,7 +763,12 @@ void DrawContextMenu(ImVec2& scrolling)
 
                 for (int j = 0; j < nodes[i]->outputConnections.size(); ++j)
                 {
-                    if (nodes[i]->outputConnections[j]->id == node_selected)
+                    isSelected = false;
+                    auto search = node_selected.find(nodes[i]->outputConnections[j]->id);
+                    if (search != node_selected.end())
+                        isSelected = true;
+
+                    if (isSelected)
                     {
                         nodes[i]->outputConnections.erase(nodes[i]->outputConnections.begin() + j);
                     }
@@ -765,12 +786,13 @@ void OpenContextMenu(int& node_hovered_in_list, int& node_hovered_in_scene, bool
     // Open context menu
     if (!ImGui::IsAnyItemHovered() && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(1))
     {
-        node_selected = node_hovered_in_list = node_hovered_in_scene = -1; // resets selected to none
+        node_selected.clear();
+        node_hovered_in_list = node_hovered_in_scene = -1; // resets selected to none
         open_context_menu = true;
     }
     else if (ImGui::IsAnyItemHovered() && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(1))
     {
-        if (node_selected != -1)
+        if (!node_selected.empty())
             open_node_menu = true;
     }
 
@@ -814,8 +836,16 @@ void NodeListRender(int& node_hovered_in_list, bool& open_node_menu)
 
         ImGui::PushID(node->id);
 
-        if (ImGui::Selectable(node->name.c_str(), node->id == node_selected))
-            node_selected = node->id;
+        bool isSelected = false;
+        auto search = node_selected.find(nodes[i]->id);
+        if (search != node_selected.end())
+            isSelected = true;
+
+        if (ImGui::Selectable(node->name.c_str(), isSelected))
+        {
+            node_selected.clear();
+            node_selected.insert(node->id);
+        }
         if (ImGui::IsItemHovered())
         {
             node_hovered_in_list = node->id;
@@ -867,9 +897,9 @@ void HandleNodes()
         connection_selected.release();
     }
 
-    if (node_selected && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered())
+    if (!node_selected.empty() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered())
     {
-        node_selected = -1;
+        node_selected.clear();
     }
 
     OpenContextMenu(node_hovered_in_list, node_hovered_in_scene, open_context_menu, open_node_menu);
