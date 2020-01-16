@@ -45,6 +45,8 @@ const float NODE_SLOT_RADIUS = 5.0f;
 const ImVec2 NODE_WINDOW_PADDING(8.0f, 8.0f);
 
 ImVec2 scrolling = ImVec2(0.0f, 0.0f);
+ImVec2 selectionStartPos = ImVec2(0, 0);
+ImVec2 selectionEndPos = ImVec2(0, 0);
 
 static std::set<int> node_selected = {};
 static int nodeNum = 0;
@@ -52,6 +54,7 @@ static int nodeNum = 0;
 bool show_grid = true;
 bool connectionHovered = false;
 bool resizeHovered = false;
+bool isSelectionBox = false;
 
 std::string filePath;
 std::string relativePath;
@@ -222,6 +225,8 @@ void DrawNodeGeneral(Node*& node, ImVec2& offset, ImDrawList* draw_list)
     ImVec2 pos = node_rect_min + NODE_WINDOW_PADDING;
     ImVec2 textSize = ImGui::CalcTextSize(node->name.c_str());
 
+    ImGuiIO& io = ImGui::GetIO();
+
     pos.x = node_rect_min.x + (node->size.x / 2) - (textSize.x / 2);
 
     // Get id & node start position
@@ -282,16 +287,16 @@ void DrawNodeGeneral(Node*& node, ImVec2& offset, ImDrawList* draw_list)
     DrawConnection(node_rect_min, node, mouse, pos, draw_list);
     ResizeNode(node_rect_min, node, mouse, pos, draw_list);
 
-    if (node_moving_active && !ImGui::GetIO().KeyCtrl) // checks if grabbing node
+    if (node_moving_active && !io.KeyCtrl) // checks if grabbing node
     {
         node_selected.clear();
         node_selected.insert(node->id);
     }
-    else if(node_moving_active && ImGui::GetIO().KeyCtrl)
+    else if(node_moving_active && io.KeyCtrl)
         node_selected.insert(node->id);
 
     if (isSelected && ImGui::IsMouseDragging(0))
-        node->pos = node->pos + ImGui::GetIO().MouseDelta;
+        node->pos = node->pos + io.MouseDelta;
 
     ImGui::PopID();
 }
@@ -866,6 +871,8 @@ void HandleNodes()
     int node_hovered_in_list = -1;
     int node_hovered_in_scene = -1;
 
+    ImVec2 mouse = ImGui::GetIO().MousePos;
+
     connectionHovered = false;
 
     NodeListRender(node_hovered_in_list, open_node_menu);
@@ -901,6 +908,41 @@ void HandleNodes()
     {
         node_selected.clear();
     }
+    else if (!isSelectionBox && ImGui::IsMouseDown(0) && !ImGui::IsAnyItemHovered())
+    {
+        isSelectionBox = true;
+        selectionStartPos = mouse;
+        selectionEndPos = mouse;
+    }
+
+    if (isSelectionBox && ImGui::IsMouseDragging(0))
+    {
+        selectionEndPos = mouse;
+        draw_list->AddRect(selectionStartPos, selectionEndPos, ImColor(100, 100, 255,125),0,15,2);
+        draw_list->AddRectFilled(selectionStartPos, selectionEndPos, ImColor(50, 50, 255,25));
+    }
+    else if (isSelectionBox && ImGui::IsMouseReleased(0))
+    {
+        if (selectionStartPos.x > selectionEndPos.x)
+        {
+            auto temp = selectionStartPos;
+            selectionStartPos = selectionEndPos;
+            selectionEndPos = temp;
+        }
+
+        node_selected.clear();
+
+        for (Node* node : nodes)
+        {
+            if (ImRect(selectionStartPos, selectionEndPos).Contains(node->pos + offset))
+            {
+                node_selected.insert(node->id);
+            }
+        }
+
+        isSelectionBox = false;
+    }
+
 
     OpenContextMenu(node_hovered_in_list, node_hovered_in_scene, open_context_menu, open_node_menu);
 
