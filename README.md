@@ -1,5 +1,4 @@
-# Node-Based Dialogue Tree Editor
-Dear ImGui based node dialogue tree 
+# Node-Based Dialogue Tree Editor 
 
 A simple Node-Based Dialogue Editor for creating dialogue built in C++.
 Used to create various nodes for game dialog which you can then export as a json file.
