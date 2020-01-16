@@ -911,18 +911,30 @@ void HandleNodes()
     }
     else if (isSelectionBox && ImGui::IsMouseReleased(0))
     {
-        if (selectionStartPos.x > selectionEndPos.x)
+        auto x1 = selectionStartPos.x;
+        auto x2 = selectionEndPos.x;
+        auto y1 = selectionStartPos.y;
+        auto y2 = selectionEndPos.y;
+
+        if (x1 > x2)
         {
-            auto temp = selectionStartPos;
-            selectionStartPos = selectionEndPos;
-            selectionEndPos = temp;
+            auto temp = x1;
+            x1 = x2;
+            x2 = temp;
+        }
+
+        if (y1 > y2)
+        {
+            auto temp = y1;
+            y1 = y2;
+            y2 = temp;
         }
 
         node_selected.clear();
 
         for (Node* node : nodes)
         {
-            if (ImRect(selectionStartPos, selectionEndPos).Contains(node->pos + offset))
+            if (ImRect(x1,y1,x2,y2).Contains(node->pos + offset))
             {
                 node_selected.insert(node->id);
             }
