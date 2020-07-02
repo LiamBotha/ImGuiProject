@@ -9,5 +9,5 @@ https://www.dropbox.com/s/y0dgmgzsrpajlb7/Node-Based%20Dialogue%20Editor.rar?dl=
 
 ## Screenshots
 
-![Screenshot 1](https://liambotha.github.io/img/Dialogue01.png)
-![Screenshot 2](https://liambotha.github.io/img/Dialogue02.png)
+![Screenshot 1](https://github.com/LiamBotha/LiamBotha.github.io/tree/master/images/Dialogue01.png)
+![Screenshot 2](https://github.com/LiamBotha/LiamBotha.github.io/tree/master/images/Dialogue02.png)
